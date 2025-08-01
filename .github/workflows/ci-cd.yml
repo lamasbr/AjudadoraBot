@@ -211,6 +211,24 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
         
+    - name: Generate Version
+      id: version
+      run: |
+        # Generate semantic version based on branch/tag
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # If it's a tag, use the tag version
+          VERSION=${GITHUB_REF#refs/tags/v}
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # For main branch, use date-based version with build number
+          VERSION="1.0.0-main.$(date +%Y%m%d).${GITHUB_RUN_NUMBER}"
+        else
+          # For other branches, use branch name with build number
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9]/-/g')
+          VERSION="1.0.0-${BRANCH_NAME}.${GITHUB_RUN_NUMBER}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+        
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
@@ -228,6 +246,7 @@ jobs:
           org.opencontainers.image.title=AjudadoraBot Combined App
           org.opencontainers.image.description=Cost-optimized Telegram bot with combined frontend and backend
           org.opencontainers.image.vendor=AjudadoraBot Team
+          org.opencontainers.image.version=${{ steps.version.outputs.version }}
           azure.app-service.optimized=true
           azure.tier=F1
           datadog.monitored=true
@@ -249,7 +268,7 @@ jobs:
         build-args: |
           BUILDKIT_INLINE_CACHE=1
           BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          VERSION=${{ steps.version.outputs.version }}
 
   # ================================
   # Container Security Scanning (Docker)

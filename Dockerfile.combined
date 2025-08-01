@@ -43,7 +43,7 @@ RUN rm -rf node_modules package*.json && \
 # ================================
 FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS backend-build
 
-# Build arguments
+# Build arguments (VERSION kept as build arg but not used in MSBuild to prevent conflicts)
 ARG BUILD_DATE
 ARG VERSION="1.0.0"
 ARG BUILDKIT_INLINE_CACHE=1
@@ -60,13 +60,17 @@ COPY src/AjudadoraBot.Core/AjudadoraBot.Core.csproj src/AjudadoraBot.Core/
 COPY src/AjudadoraBot.Infrastructure/AjudadoraBot.Infrastructure.csproj src/AjudadoraBot.Infrastructure/
 
 # Restore dependencies for main projects only with optimization for Azure App Service
-RUN dotnet restore src/AjudadoraBot.Api/AjudadoraBot.Api.csproj --runtime linux-musl-x64 --no-cache --verbosity minimal
+# Clear any MSBuild properties that might conflict with version parsing
+RUN unset VERSION 2>/dev/null || true && \
+    dotnet restore src/AjudadoraBot.Api/AjudadoraBot.Api.csproj --runtime linux-musl-x64 --no-cache --verbosity minimal
 
 # Copy source code
 COPY src/ src/
 
 # Build and publish with production optimizations for F1 tier
-RUN dotnet build src/AjudadoraBot.Api/AjudadoraBot.Api.csproj -c Release --no-restore --runtime linux-musl-x64 --verbosity minimal && \
+# Clear VERSION environment variable to prevent MSBuild conflicts
+RUN unset VERSION 2>/dev/null || true && \
+    dotnet build src/AjudadoraBot.Api/AjudadoraBot.Api.csproj -c Release --no-restore --runtime linux-musl-x64 --verbosity minimal && \
     dotnet publish src/AjudadoraBot.Api/AjudadoraBot.Api.csproj \
     -c Release \
     -o /app/publish \
@@ -93,7 +97,7 @@ COPY --from=frontend-build /frontend-src /app/publish/wwwroot/
 # ================================
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
 
-# Build metadata
+# Build metadata (for container labels only)
 ARG BUILD_DATE
 ARG VERSION
 
