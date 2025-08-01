@@ -1,4 +1,5 @@
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Payments;
 
 namespace AjudadoraBot.Core.Interfaces;
 

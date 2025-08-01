@@ -25,13 +25,13 @@ public class StatusCommand : ICommandHandler
         _logger = logger;
     }
 
-    public Task<bool> CanExecuteAsync(Message message, User user)
+    public Task<bool> CanExecuteAsync(Message message, AjudadoraBot.Core.Models.User user)
     {
         // Everyone can execute the status command
         return Task.FromResult(true);
     }
 
-    public async Task ExecuteAsync(Message message, User user)
+    public async Task ExecuteAsync(Message message, AjudadoraBot.Core.Models.User user)
     {
         try
         {

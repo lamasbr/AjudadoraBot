@@ -1,4 +1,5 @@
 using Telegram.Bot.Types;
+using AjudadoraBot.Core.Models;
 
 namespace AjudadoraBot.Core.Interfaces;
 
@@ -14,6 +15,6 @@ public interface ICommandHandler
 {
     string Command { get; }
     string Description { get; }
-    Task<bool> CanExecuteAsync(Message message, User user);
-    Task ExecuteAsync(Message message, User user);
+    Task<bool> CanExecuteAsync(Message message, Models.User user);
+    Task ExecuteAsync(Message message, Models.User user);
 }

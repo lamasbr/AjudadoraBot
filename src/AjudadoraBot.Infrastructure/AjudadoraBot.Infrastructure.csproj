@@ -13,7 +13,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Telegram.Bot" Version="21.12.0" />
+    <PackageReference Include="Telegram.Bot" Version="22.0.0" />
   </ItemGroup>
 
   <ItemGroup>

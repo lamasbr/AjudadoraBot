@@ -84,7 +84,7 @@ public class PollingService : BackgroundService
                 Telegram.Bot.Types.Enums.UpdateType.ChatMember,
                 Telegram.Bot.Types.Enums.UpdateType.ChatJoinRequest
             },
-            ThrowPendingUpdates = true,
+            DropPendingUpdates = true,
             Limit = 100
         };
 
@@ -94,7 +94,7 @@ public class PollingService : BackgroundService
         {
             await _botClient.ReceiveAsync(
                 updateHandler: HandleUpdateAsync,
-                pollingErrorHandler: HandlePollingErrorAsync,
+                errorHandler: HandlePollingErrorAsync,
                 receiverOptions: receiverOptions,
                 cancellationToken: _pollingCts.Token);
         }

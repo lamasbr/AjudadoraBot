@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AjudadoraBot.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ca1c1373947d56638df9e5db35db724debdf44c5")]
 [assembly: System.Reflection.AssemblyProductAttribute("AjudadoraBot.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AjudadoraBot.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

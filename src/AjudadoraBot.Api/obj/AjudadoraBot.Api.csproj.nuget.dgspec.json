@@ -57,6 +57,10 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "Datadog.Trace": {
+              "target": "Package",
+              "version": "[2.50.0, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[9.0.0, )"
@@ -75,6 +79,10 @@
               "target": "Package",
               "version": "[9.0.0, )"
             },
+            "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[7.2.0, )"
@@ -83,9 +91,13 @@
               "target": "Package",
               "version": "[8.3.0, )"
             },
+            "System.Threading.RateLimiting": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
             "Telegram.Bot": {
               "target": "Package",
-              "version": "[21.12.0, )"
+              "version": "[22.0.0, )"
             }
           },
           "imports": [
@@ -159,11 +171,11 @@
           "dependencies": {
             "System.ComponentModel.Annotations": {
               "target": "Package",
-              "version": "[6.0.0, )"
+              "version": "[5.0.0, )"
             },
             "Telegram.Bot": {
               "target": "Package",
-              "version": "[21.12.0, )"
+              "version": "[22.0.0, )"
             }
           },
           "imports": [
@@ -262,7 +274,7 @@
             },
             "Telegram.Bot": {
               "target": "Package",
-              "version": "[21.12.0, )"
+              "version": "[22.0.0, )"
             }
           },
           "imports": [

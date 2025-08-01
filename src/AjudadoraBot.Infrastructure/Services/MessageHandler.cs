@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Payments;
 using AjudadoraBot.Core.Interfaces;
 using AjudadoraBot.Core.Enums;
 
@@ -224,8 +225,7 @@ public class MessageHandler : IMessageHandler
         {
             // For now, approve all pre-checkout queries
             await _botClient.AnswerPreCheckoutQueryAsync(
-                preCheckoutQueryId: preCheckoutQuery.Id,
-                ok: true);
+                preCheckoutQueryId: preCheckoutQuery.Id);
 
             _logger.LogDebug("Handled pre-checkout query from user {UserId}", preCheckoutQuery.From.Id);
         }
@@ -248,7 +248,6 @@ public class MessageHandler : IMessageHandler
             // For now, return empty shipping options
             await _botClient.AnswerShippingQueryAsync(
                 shippingQueryId: shippingQuery.Id,
-                ok: true,
                 shippingOptions: Array.Empty<Telegram.Bot.Types.Payments.ShippingOption>());
 
             _logger.LogDebug("Handled shipping query from user {UserId}", shippingQuery.From.Id);
@@ -372,7 +371,7 @@ public class MessageHandler : IMessageHandler
         await _botClient.SendTextMessageAsync(
             chatId: message.Chat.Id,
             text: responseText,
-            replyToMessageId: message.MessageId);
+            replyParameters: new ReplyParameters { MessageId = message.MessageId });
 
         _logger.LogDebug("Sent echo response to user {UserId}", user.TelegramId);
     }
