@@ -1,0 +1,64 @@
+# Example Terraform variables for free-tier optimized deployment
+# Copy this file to terraform.tfvars and update with your values
+
+# Application Configuration
+app_name    = "ajudadorabot"
+environment = "production"
+location    = "East US"  # Choose cost-effective region
+app_version = "1.0.0"
+
+# GitHub Container Registry (Free)
+container_registry = "ghcr.io"
+ghcr_username     = "your-github-username"
+ghcr_token        = "ghp_your_github_personal_access_token_here"  # Needs read:packages scope
+
+# Telegram Bot Configuration
+telegram_bot_token = "1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789"  # Get from @BotFather
+
+# JWT Configuration (auto-generated if not provided)
+jwt_secret = ""  # Leave empty to auto-generate secure secret
+
+# Datadog Configuration (Free tier: 5 hosts, 1-day retention)
+datadog_api_key = "your_datadog_api_key_here"      # Get from Datadog dashboard
+datadog_site    = "datadoghq.com"                  # or datadoghq.eu, us3.datadoghq.com, etc.
+
+# CORS Configuration for Telegram Mini App
+allowed_origins = [
+  "https://web.telegram.org",
+  "https://k.web.telegram.org", 
+  "https://z.web.telegram.org",
+  "https://a.web.telegram.org"
+]
+
+# Cost Optimization Settings
+create_storage_account = false  # Use App Service local storage for SQLite to save costs
+
+# Free Tier Constraints (informational - don't change these)
+free_tier_constraints = {
+  compute_hours_per_day    = 1      # 60 minutes/day limit
+  storage_gb              = 1       # 1 GB storage limit
+  bandwidth_gb            = 0.165   # 165 MB/day outbound limit
+  custom_domains          = 0       # No custom domains on free tier
+  ssl_connections         = 0       # No custom SSL on free tier
+  deployment_slots        = 0       # No staging slots on free tier
+  key_vault_operations    = 25000   # 25K operations/month free
+  datadog_hosts          = 5        # 5 hosts max on free tier
+  datadog_retention_days = 1        # 1 day retention on free tier
+}
+
+# Monitoring and Alerting
+enable_cost_alerts = true
+alert_email       = "your-email@example.com"
+
+# Additional App Settings (optional)
+additional_app_settings = {
+  # Add any custom environment variables here
+  # "CUSTOM_SETTING" = "value"
+}
+
+# Additional Tags (optional)
+additional_tags = {
+  "Project"     = "AjudadoraBot"
+  "Owner"       = "YourName"
+  "Environment" = "Production"
+}

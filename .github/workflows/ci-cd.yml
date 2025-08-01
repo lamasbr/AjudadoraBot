@@ -1,0 +1,772 @@
+name: Azure Container Registry CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  # Build and registry configuration
+  DOTNET_VERSION: '9.0'
+  NODE_VERSION: '20'
+  REGISTRY_NAME: 'ajudadorabotregistry'
+  IMAGE_NAME: 'ajudadorabot'
+  
+  # Azure resources
+  AZURE_WEBAPP_NAME_STAGING: 'ajudadorabot-staging-api'
+  AZURE_WEBAPP_NAME_PRODUCTION: 'ajudadorabot-production-api'
+  AZURE_RESOURCE_GROUP_STAGING: 'ajudadorabot-staging-rg'
+  AZURE_RESOURCE_GROUP_PRODUCTION: 'ajudadorabot-production-rg'
+  
+  # Container registry URLs
+  ACR_LOGIN_SERVER_STAGING: 'ajudadorabotregistrystaging.azurecr.io'
+  ACR_LOGIN_SERVER_PRODUCTION: 'ajudadorabotregistryproduction.azurecr.io'
+  
+  # Analysis tools
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+jobs:
+  # ================================
+  # Code Quality & Security Analysis
+  # ================================
+  analyze:
+    name: Code Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'csharp', 'javascript' ]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+        
+    - name: Setup .NET
+      if: matrix.language == 'csharp'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      if: matrix.language == 'csharp'
+      run: dotnet restore
+      
+    - name: Build
+      if: matrix.language == 'csharp' 
+      run: dotnet build --no-restore
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
+  # ================================
+  # Backend Testing
+  # ================================
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+      
+    - name: Run Unit Tests
+      run: |
+        dotnet test tests/AjudadoraBot.UnitTests/AjudadoraBot.UnitTests.csproj \
+          --no-build \
+          --configuration Release \
+          --logger trx \
+          --logger "console;verbosity=detailed" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./test-results/unit
+          
+    - name: Run Integration Tests
+      run: |
+        dotnet test tests/AjudadoraBot.IntegrationTests/AjudadoraBot.IntegrationTests.csproj \
+          --no-build \
+          --configuration Release \
+          --logger trx \
+          --logger "console;verbosity=detailed" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./test-results/integration
+          
+    - name: Install Playwright
+      run: |
+        cd tests/AjudadoraBot.E2ETests
+        dotnet build
+        pwsh bin/Release/net9.0/playwright.ps1 install --with-deps
+        
+    - name: Run E2E Tests
+      run: |
+        dotnet test tests/AjudadoraBot.E2ETests/AjudadoraBot.E2ETests.csproj \
+          --no-build \
+          --configuration Release \
+          --logger trx \
+          --logger "console;verbosity=detailed" \
+          --results-directory ./test-results/e2e
+          
+    - name: Run Performance Tests
+      run: |
+        dotnet run --project tests/AjudadoraBot.PerformanceTests/AjudadoraBot.PerformanceTests.csproj \
+          --configuration Release
+          
+    - name: Generate Code Coverage Report
+      run: |
+        dotnet tool install --global dotnet-reportgenerator-globaltool
+        reportgenerator \
+          -reports:"test-results/**/coverage.cobertura.xml" \
+          -targetdir:"coverage-report" \
+          -reporttypes:"Html;Cobertura;SonarQube"
+          
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-backend
+        path: |
+          test-results/
+          coverage-report/
+          
+    - name: Publish Test Results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Backend Test Results
+        path: 'test-results/**/*.trx'
+        reporter: dotnet-trx
+
+  # ================================
+  # Frontend Testing
+  # ================================
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+      
+    - name: Run ESLint
+      working-directory: frontend
+      run: npm run lint
+      
+    - name: Run Tests
+      working-directory: frontend
+      run: npm run test:ci
+      
+    - name: Upload Frontend Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-frontend
+        path: frontend/coverage/
+
+  # ================================
+  # SonarQube Analysis
+  # ================================
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: ${{ always() && !inputs.skip_tests }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Download test results
+      uses: actions/download-artifact@v4
+      with:
+        name: test-results-backend
+        path: test-results/
+        
+    - name: Install SonarScanner
+      run: dotnet tool install --global dotnet-sonarscanner
+      
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Begin SonarQube Analysis
+      run: |
+        dotnet sonarscanner begin \
+          /k:"ajudadorabot" \
+          /o:"your-org" \
+          /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.cs.opencover.reportsPaths="test-results/**/coverage.opencover.xml" \
+          /d:sonar.cs.vstest.reportsPaths="test-results/**/*.trx"
+          
+    - name: Build
+      run: dotnet build --no-restore
+      
+    - name: End SonarQube Analysis
+      run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+  # ================================
+  # Build and Push Container Images
+  # ================================
+  build-and-push:
+    name: Build and Push Container Images
+    runs-on: ubuntu-latest
+    needs: [analyze]
+    outputs:
+      backend-image-tag: ${{ steps.meta-backend.outputs.tags }}
+      backend-image-digest: ${{ steps.build-backend.outputs.digest }}
+      frontend-image-tag: ${{ steps.meta-frontend.outputs.tags }}
+      frontend-image-digest: ${{ steps.build-frontend.outputs.digest }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        platforms: linux/amd64,linux/arm64
+        
+    - name: Log in to Azure Container Registry (Staging)
+      if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'staging'
+      uses: azure/docker-login@v2
+      with:
+        login-server: ${{ env.ACR_LOGIN_SERVER_STAGING }}
+        username: ${{ secrets.ACR_USERNAME_STAGING }}
+        password: ${{ secrets.ACR_PASSWORD_STAGING }}
+        
+    - name: Log in to Azure Container Registry (Production)
+      if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production' || startsWith(github.ref, 'refs/tags/v')
+      uses: azure/docker-login@v2
+      with:
+        login-server: ${{ env.ACR_LOGIN_SERVER_PRODUCTION }}
+        username: ${{ secrets.ACR_USERNAME_PRODUCTION }}
+        password: ${{ secrets.ACR_PASSWORD_PRODUCTION }}
+        
+    - name: Extract metadata for Backend
+      id: meta-backend
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          ${{ env.ACR_LOGIN_SERVER_STAGING }}/${{ env.IMAGE_NAME }}-backend
+          ${{ env.ACR_LOGIN_SERVER_PRODUCTION }}/${{ env.IMAGE_NAME }}-backend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+        labels: |
+          org.opencontainers.image.title=AjudadoraBot Backend API
+          org.opencontainers.image.description=Telegram Bot Backend API with .NET 9
+          org.opencontainers.image.vendor=AjudadoraBot Team
+          
+    - name: Extract metadata for Frontend
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          ${{ env.ACR_LOGIN_SERVER_STAGING }}/${{ env.IMAGE_NAME }}-frontend
+          ${{ env.ACR_LOGIN_SERVER_PRODUCTION }}/${{ env.IMAGE_NAME }}-frontend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+        labels: |
+          org.opencontainers.image.title=AjudadoraBot Frontend
+          org.opencontainers.image.description=Telegram Mini App Frontend
+          org.opencontainers.image.vendor=AjudadoraBot Team
+          
+    - name: Build and push Backend Docker image
+      id: build-backend
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.backend
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta-backend.outputs.tags }}
+        labels: ${{ steps.meta-backend.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILD_DATE=${{ fromJSON(steps.meta-backend.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta-backend.outputs.json).labels['org.opencontainers.image.version'] }}
+          
+    - name: Build and push Frontend Docker image
+      id: build-frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILD_DATE=${{ fromJSON(steps.meta-frontend.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta-frontend.outputs.json).labels['org.opencontainers.image.version'] }}
+
+  # ================================
+  # Container Security Scanning
+  # ================================
+  container-security-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: always()
+    
+    strategy:
+      matrix:
+        image: [backend, frontend]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set image reference
+      id: image-ref
+      run: |
+        if [ "${{ github.ref }}" == "refs/heads/develop" ] || [ "${{ github.event.inputs.environment }}" == "staging" ]; then
+          echo "IMAGE_REF=${{ env.ACR_LOGIN_SERVER_STAGING }}/${{ env.IMAGE_NAME }}-${{ matrix.image }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+        else
+          echo "IMAGE_REF=${{ env.ACR_LOGIN_SERVER_PRODUCTION }}/${{ env.IMAGE_NAME }}-${{ matrix.image }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Run Trivy vulnerability scanner on container image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.image-ref.outputs.IMAGE_REF }}
+        format: 'sarif'
+        output: 'trivy-${{ matrix.image }}-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+        
+    - name: Run Trivy configuration scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-config-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-${{ matrix.image }}-results.sarif'
+        
+    - name: Upload Trivy config scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always() && matrix.image == 'backend'
+      with:
+        sarif_file: 'trivy-config-results.sarif'
+        
+    - name: Generate security report
+      run: |
+        echo "# Security Scan Report - ${{ matrix.image }}" > security-report-${{ matrix.image }}.md
+        echo "**Image:** ${{ steps.image-ref.outputs.IMAGE_REF }}" >> security-report-${{ matrix.image }}.md
+        echo "**Scan Date:** $(date)" >> security-report-${{ matrix.image }}.md
+        echo "" >> security-report-${{ matrix.image }}.md
+        trivy image --format table ${{ steps.image-ref.outputs.IMAGE_REF }} >> security-report-${{ matrix.image }}.md || true
+        
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-report-${{ matrix.image }}
+        path: security-report-${{ matrix.image }}.md
+
+  # ================================  
+  # Deploy to Staging
+  # ================================
+  deploy-staging:
+    name: Deploy Containers to Staging
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend, build-and-push, container-security-scan]
+    if: |
+      (github.ref == 'refs/heads/develop' || 
+       github.event.inputs.environment == 'staging') &&
+      github.event_name != 'pull_request'
+    environment:
+      name: staging
+      url: https://${{ env.AZURE_WEBAPP_NAME_STAGING }}.azurewebsites.net
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS_STAGING }}
+        
+    - name: Set container image tags
+      id: image-tags
+      run: |
+        echo "BACKEND_IMAGE=${{ env.ACR_LOGIN_SERVER_STAGING }}/${{ env.IMAGE_NAME }}-backend:${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "FRONTEND_IMAGE=${{ env.ACR_LOGIN_SERVER_STAGING }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
+        
+    - name: Deploy Backend Container to App Service
+      run: |
+        az webapp config container set \
+          --name ${{ env.AZURE_WEBAPP_NAME_STAGING }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP_STAGING }} \
+          --docker-custom-image-name ${{ steps.image-tags.outputs.BACKEND_IMAGE }} \
+          --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER_STAGING }} \
+          --docker-registry-server-user ${{ secrets.ACR_USERNAME_STAGING }} \
+          --docker-registry-server-password ${{ secrets.ACR_PASSWORD_STAGING }}
+        
+    - name: Configure Backend App Service Container Settings
+      uses: azure/appservice-settings@v1
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME_STAGING }}
+        app-settings-json: |
+          [
+            {
+              "name": "ASPNETCORE_ENVIRONMENT",
+              "value": "Staging"
+            },
+            {
+              "name": "ASPNETCORE_URLS",
+              "value": "http://+:8080"
+            },
+            {
+              "name": "TelegramBot__Token",
+              "value": "@Microsoft.KeyVault(VaultName=ajudadorabot-staging-kv;SecretName=telegram-bot-token)"
+            },
+            {
+              "name": "MiniApp__JwtSecret",
+              "value": "@Microsoft.KeyVault(VaultName=ajudadorabot-staging-kv;SecretName=jwt-secret)"
+            },
+            {
+              "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+              "value": "true"
+            },
+            {
+              "name": "WEBSITES_CONTAINER_START_TIME_LIMIT",
+              "value": "230"
+            },
+            {
+              "name": "DOCKER_REGISTRY_SERVER_URL",
+              "value": "https://${{ env.ACR_LOGIN_SERVER_STAGING }}"
+            },
+            {
+              "name": "DOCKER_REGISTRY_SERVER_USERNAME",
+              "value": "${{ secrets.ACR_USERNAME_STAGING }}"
+            },
+            {
+              "name": "DOCKER_REGISTRY_SERVER_PASSWORD",
+              "value": "${{ secrets.ACR_PASSWORD_STAGING }}"
+            }
+          ]
+          
+    - name: Deploy Frontend to Static Web App
+      uses: azure/static-web-apps-deploy@v1
+      with:
+        azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        action: 'upload'
+        app_location: '/frontend'
+        output_location: ''
+        
+    - name: Restart Backend App Service
+      run: |
+        az webapp restart \
+          --name ${{ env.AZURE_WEBAPP_NAME_STAGING }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP_STAGING }}
+        
+    - name: Wait for container startup
+      run: |
+        echo "Waiting for container to start..."
+        sleep 60
+        
+    - name: Run health checks
+      run: |
+        max_attempts=10
+        attempt=1
+        
+        while [ $attempt -le $max_attempts ]; do
+          echo "Health check attempt $attempt/$max_attempts"
+          
+          if curl -f -s --max-time 30 https://${{ env.AZURE_WEBAPP_NAME_STAGING }}.azurewebsites.net/health; then
+            echo "Health check passed!"
+            break
+          fi
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Health check failed after $max_attempts attempts"
+            exit 1
+          fi
+          
+          echo "Health check failed, retrying in 15 seconds..."
+          sleep 15
+          attempt=$((attempt + 1))
+        done
+        
+    - name: Run container smoke tests
+      run: |
+        # Test API endpoints
+        curl -f https://${{ env.AZURE_WEBAPP_NAME_STAGING }}.azurewebsites.net/api/bot/info || exit 1
+        
+        # Check container logs
+        az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME_STAGING }} --resource-group ${{ env.AZURE_RESOURCE_GROUP_STAGING }} --timeout 30 || true
+        
+    - name: Azure Logout
+      if: always()
+      run: az logout
+        
+  # ================================
+  # Deploy to Production  
+  # ================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: |
+      (github.ref == 'refs/heads/main' || 
+       github.event.inputs.environment == 'production' ||
+       startsWith(github.ref, 'refs/tags/v')) &&
+      github.event_name != 'pull_request'
+    environment:
+      name: production
+      url: https://${{ env.AZURE_WEBAPP_NAME_PRODUCTION }}.azurewebsites.net
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dotnet-app-${{ github.sha }}
+        path: ./publish
+        
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
+        
+    - name: Create database backup
+      run: |
+        az webapp config appsettings list --name ${{ env.AZURE_WEBAPP_NAME_PRODUCTION }} --resource-group ${{ env.AZURE_RESOURCE_GROUP_PRODUCTION }} --query "[?name=='DATABASE_BACKUP_ENABLED'].value" --output tsv
+        # Database backup is handled by Azure File Share snapshots
+        
+    - name: Deploy to staging slot first (Blue-Green deployment)
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME_PRODUCTION }}
+        slot-name: 'staging'
+        package: './publish'
+        startup-command: './startup.sh'
+        
+    - name: Configure staging slot settings
+      uses: azure/appservice-settings@v1
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME_PRODUCTION }}
+        slot-name: 'staging'
+        app-settings-json: |
+          [
+            {
+              "name": "ASPNETCORE_ENVIRONMENT",
+              "value": "Production"
+            },
+            {
+              "name": "TelegramBot__Token",
+              "value": "@Microsoft.KeyVault(VaultName=ajudadorabot-production-kv;SecretName=telegram-bot-token)"
+            },
+            {
+              "name": "MiniApp__JwtSecret",
+              "value": "@Microsoft.KeyVault(VaultName=ajudadorabot-production-kv;SecretName=jwt-secret)"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "1"
+            },
+            {
+              "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+              "value": "false"
+            }
+          ]
+          
+    - name: Warm up staging slot
+      run: |
+        sleep 60
+        curl -f https://${{ env.AZURE_WEBAPP_NAME_PRODUCTION }}-staging.azurewebsites.net/health || exit 1
+        
+    - name: Run health checks on staging slot
+      run: |
+        for i in {1..5}; do
+          if curl -f https://${{ env.AZURE_WEBAPP_NAME_PRODUCTION }}-staging.azurewebsites.net/health; then
+            echo "Health check $i passed"
+            sleep 10
+          else
+            echo "Health check $i failed"
+            exit 1
+          fi
+        done
+        
+    - name: Swap staging slot to production (Blue-Green deployment)
+      run: |
+        az webapp deployment slot swap \
+          --name ${{ env.AZURE_WEBAPP_NAME_PRODUCTION }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP_PRODUCTION }} \
+          --slot staging \
+          --target-slot production
+          
+    - name: Verify production deployment
+      run: |
+        sleep 30
+        curl -f https://${{ env.AZURE_WEBAPP_NAME_PRODUCTION }}.azurewebsites.net/health || exit 1
+        
+    - name: Notify deployment success
+      uses: 8398a7/action-slack@v3
+      if: success()
+      with:
+        status: success
+        channel: '#deployments'
+        text: 'Production deployment successful!'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: Notify deployment failure
+      uses: 8398a7/action-slack@v3
+      if: failure()
+      with:
+        status: failure
+        channel: '#deployments'
+        text: 'Production deployment failed!'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: Azure Logout
+      if: always()
+      run: az logout
+
+  # ================================
+  # Rollback Job
+  # ================================
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [deploy-production]
+    environment:
+      name: production
+      
+    steps:
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
+        
+    - name: Rollback deployment (swap back)
+      run: |
+        az webapp deployment slot swap \
+          --name ${{ env.AZURE_WEBAPP_NAME_PRODUCTION }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP_PRODUCTION }} \
+          --slot production \
+          --target-slot staging
+        
+    - name: Verify rollback
+      run: |
+        sleep 30
+        curl -f https://${{ env.AZURE_WEBAPP_NAME_PRODUCTION }}.azurewebsites.net/health || exit 1
+        
+    - name: Restore database from backup (if needed)
+      run: |
+        # Database restoration from Azure File Share snapshots would be handled here
+        echo "Database backup restoration process would be implemented here"
+        # Example: az storage file copy start --source-share database --source-path backup/latest.db --destination-share database --destination-path ajudadorabot.db
+          
+    - name: Notify rollback
+      uses: 8398a7/action-slack@v3
+      with:
+        status: warning
+        channel: '#deployments'
+        text: 'Production deployment rolled back due to failure!'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: Azure Logout
+      if: always()
+      run: az logout

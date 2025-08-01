@@ -1,0 +1,225 @@
+version: '3.8'
+
+services:
+  # ================================
+  # AjudadoraBot API Service
+  # ================================
+  ajudadorabot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: ajudadorabot-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/ajudadorabot.db
+      - TelegramBot__Token=${TELEGRAM_BOT_TOKEN}
+      - TelegramBot__WebhookUrl=${WEBHOOK_URL:-http://localhost:8080/webhook}
+      - TelegramBot__SecretToken=${WEBHOOK_SECRET_TOKEN}
+      - TelegramBot__Mode=Polling
+      - MiniApp__JwtSecret=${JWT_SECRET:-your-development-jwt-secret-key}
+      - MiniApp__JwtIssuer=AjudadoraBot-Dev
+      - MiniApp__JwtAudience=AjudadoraBot-Users-Dev
+      - MiniApp__AllowedOrigins__0=http://localhost:8080
+      - MiniApp__AllowedOrigins__1=https://t.me
+      - RateLimiting__PermitLimit=1000
+      - RateLimiting__WindowMinutes=1
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - ajudadorabot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - redis
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ajudadorabot-api.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.ajudadorabot-api.entrypoints=web"
+      - "traefik.http.services.ajudadorabot-api.loadbalancer.server.port=8080"
+
+  # ================================
+  # NGINX Reverse Proxy
+  # ================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: ajudadorabot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - ajudadorabot-network
+    depends_on:
+      - ajudadorabot-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ================================
+  # Redis Cache (Optional)
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: ajudadorabot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-developmentpassword}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - ajudadorabot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ================================
+  # PostgreSQL Database (Alternative to SQLite)
+  # ================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: ajudadorabot-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-ajudadorabot}
+      - POSTGRES_USER=${POSTGRES_USER:-ajudadorabot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-developmentpassword}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - ajudadorabot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ajudadorabot}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ================================
+  # Prometheus Monitoring
+  # ================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ajudadorabot-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - ajudadorabot-network
+
+  # ================================
+  # Grafana Dashboard
+  # ================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ajudadorabot-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - ajudadorabot-network
+    depends_on:
+      - prometheus
+
+  # ================================
+  # Traefik Load Balancer (Optional)
+  # ================================
+  traefik:
+    image: traefik:v3.0
+    container_name: ajudadorabot-traefik
+    restart: unless-stopped
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "8081:8080" # Traefik dashboard
+      - "81:80"     # HTTP
+      - "444:443"   # HTTPS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - ajudadorabot-network
+
+  # ================================
+  # Database Backup Service
+  # ================================
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    container_name: ajudadorabot-backup
+    restart: unless-stopped
+    environment:
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+      - DATABASE_PATH=/app/data/ajudadorabot.db
+    volumes:
+      - ./data:/app/data:ro
+      - ./backups:/app/backups
+    networks:
+      - ajudadorabot-network
+    depends_on:
+      - ajudadorabot-api
+
+# ================================
+# Networks
+# ================================
+networks:
+  ajudadorabot-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ================================
+# Volumes
+# ================================
+volumes:
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local

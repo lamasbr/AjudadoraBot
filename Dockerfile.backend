@@ -1,0 +1,126 @@
+# Optimized Dockerfile for Azure App Service Backend Container Deployment
+# Multi-stage build for AjudadoraBot .NET 9 API with enhanced Azure compatibility
+
+# ================================
+# Backend Build Stage
+# ================================
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS backend-build
+
+# Build arguments
+ARG BUILD_DATE
+ARG VERSION="1.0.0"
+ARG BUILDKIT_INLINE_CACHE=1
+
+# Install security updates and build dependencies
+RUN apk upgrade --no-cache && \
+    apk add --no-cache git curl
+
+WORKDIR /src
+
+# Copy solution and project files for optimized layer caching
+COPY *.sln ./
+COPY src/AjudadoraBot.Api/AjudadoraBot.Api.csproj src/AjudadoraBot.Api/
+COPY src/AjudadoraBot.Core/AjudadoraBot.Core.csproj src/AjudadoraBot.Core/
+COPY src/AjudadoraBot.Infrastructure/AjudadoraBot.Infrastructure.csproj src/AjudadoraBot.Infrastructure/
+
+# Restore dependencies with optimization flags for Azure deployment
+RUN dotnet restore --runtime linux-musl-x64 --no-cache --verbosity minimal
+
+# Copy source code
+COPY src/ src/
+
+# Build and publish with production optimizations for Azure App Service
+RUN dotnet build -c Release --no-restore --runtime linux-musl-x64 --verbosity minimal && \
+    dotnet publish src/AjudadoraBot.Api/AjudadoraBot.Api.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    --runtime linux-musl-x64 \
+    --self-contained false \
+    --verbosity minimal \
+    -p:PublishReadyToRun=true \
+    -p:PublishSingleFile=false \
+    -p:PublishTrimmed=false \
+    -p:DebugType=None
+
+# Clean up build artifacts to reduce image size
+RUN find /app/publish -name "*.pdb" -delete && \
+    find /app/publish -name "*.xml" -delete && \
+    find /app/publish -name "*.Development.*" -delete
+
+# ================================
+# Production Runtime Stage
+# ================================
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+
+# Build metadata
+ARG BUILD_DATE
+ARG VERSION
+
+# Install security updates and runtime dependencies for Azure App Service
+RUN apk upgrade --no-cache && \
+    apk add --no-cache \
+    curl \
+    ca-certificates \
+    tzdata \
+    icu-libs \
+    bash \
+    && rm -rf /var/cache/apk/*
+
+# Create application user with minimal privileges
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup -h /home/appuser -s /bin/bash
+
+# Set Azure App Service compatible environment variables
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_USE_POLLING_FILE_WATCHER=true \
+    ASPNETCORE_URLS=http://+:8080 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    ASPNETCORE_FORWARDEDHEADERS_ENABLED=true \
+    ASPNETCORE_HTTP_PORTS=8080 \
+    TZ=UTC \
+    # Azure App Service specific settings
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE=true \
+    WEBSITES_CONTAINER_START_TIME_LIMIT=230 \
+    PORT=8080
+
+# Create necessary directories with proper permissions for Azure App Service
+RUN mkdir -p /home/data /home/logs /home/tmp /app && \
+    chown -R appuser:appgroup /home/data /home/logs /home/tmp /app && \
+    chmod 755 /home/data /home/logs /home/tmp
+
+WORKDIR /app
+
+# Copy published application with proper ownership
+COPY --from=backend-build --chown=appuser:appgroup /app/publish ./
+
+# Create SQLite database directory with proper permissions
+RUN mkdir -p /home/data && \
+    chown appuser:appgroup /home/data && \
+    chmod 750 /home/data
+
+# Switch to non-root user for security
+USER appuser
+
+# Enhanced health check optimized for Azure App Service
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f --max-time 10 http://localhost:8080/health || exit 1
+
+# Expose the port that Azure App Service expects
+EXPOSE 8080
+
+# Production build metadata and labels
+LABEL maintainer="AjudadoraBot Team" \
+      org.opencontainers.image.title="AjudadoraBot Backend API" \
+      org.opencontainers.image.description="Production-ready Telegram Bot API for Azure App Service" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.source="https://github.com/yourusername/ajudadorabot" \
+      org.opencontainers.image.vendor="AjudadoraBot Team" \
+      org.opencontainers.image.licenses="MIT" \
+      azure.app-service.optimized="true" \
+      security.scan="enabled"
+
+# Use exec form for better signal handling in Azure App Service
+ENTRYPOINT ["dotnet", "AjudadoraBot.Api.dll"]

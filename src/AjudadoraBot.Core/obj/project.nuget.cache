@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "dgSpecHash": "3rfm3D+GX7g=",
+  "success": false,
+  "projectFilePath": "C:\\DEV\\pessoal\\AjudadoraBot\\src\\AjudadoraBot.Core\\AjudadoraBot.Core.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\6123938\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\8.0.0\\microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\6123938\\.nuget\\packages\\microsoft.extensions.configuration.binder\\8.0.0\\microsoft.extensions.configuration.binder.8.0.0.nupkg.sha512",
+    "C:\\Users\\6123938\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\6123938\\.nuget\\packages\\microsoft.extensions.options\\8.0.0\\microsoft.extensions.options.8.0.0.nupkg.sha512",
+    "C:\\Users\\6123938\\.nuget\\packages\\microsoft.extensions.options.configurationextensions\\8.0.0\\microsoft.extensions.options.configurationextensions.8.0.0.nupkg.sha512",
+    "C:\\Users\\6123938\\.nuget\\packages\\microsoft.extensions.primitives\\8.0.0\\microsoft.extensions.primitives.8.0.0.nupkg.sha512",
+    "C:\\Users\\6123938\\.nuget\\packages\\system.text.json\\8.0.5\\system.text.json.8.0.5.nupkg.sha512",
+    "C:\\Users\\6123938\\.nuget\\packages\\telegram.bot\\22.0.0\\telegram.bot.22.0.0.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "AjudadoraBot.Core depends on Telegram.Bot (>= 21.12.0) but Telegram.Bot 21.12.0 was not found. Telegram.Bot 22.0.0 was resolved instead.",
+      "libraryId": "Telegram.Bot",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    },
+    {
+      "code": "NU1102",
+      "level": "Error",
+      "message": "Unable to find package System.ComponentModel.Annotations with version (>= 6.0.0)\r\n  - Found 57 version(s) in nuget.org [ Nearest version: 6.0.0-preview.4.21253.7 ]\r\n  - Found 57 version(s) in l1dc-nuget [ Nearest version: 6.0.0-preview.4.21253.7 ]",
+      "libraryId": "System.ComponentModel.Annotations",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    }
+  ]
+}

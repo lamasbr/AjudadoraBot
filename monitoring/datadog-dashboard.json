@@ -1,0 +1,468 @@
+{
+  "title": "AjudadoraBot - Free Tier Monitoring",
+  "description": "Cost-optimized monitoring dashboard for AjudadoraBot running on Azure Free Tier",
+  "widgets": [
+    {
+      "id": 1,
+      "definition": {
+        "title": "Free Tier Status Overview",
+        "type": "note",
+        "content": "# Azure Free Tier Limits\n\n**App Service F1:**\n- ⏱️ 60 minutes compute/day\n- 💾 1GB storage total\n- 🌐 165MB bandwidth/day\n\n**Key Vault:**\n- 🔑 25,000 operations/month\n\n**Datadog Free:**\n- 📊 5 hosts maximum\n- 📅 1-day retention",
+        "background_color": "blue",
+        "font_size": "14",
+        "text_align": "left",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left"
+      },
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      }
+    },
+    {
+      "id": 2,
+      "definition": {
+        "title": "Application Health",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "avg:azure.web_sites.availability{service:ajudadorabot}",
+            "aggregator": "avg",
+            "conditional_formats": [
+              {
+                "comparator": ">",
+                "value": 95,
+                "palette": "white_on_green"
+              },
+              {
+                "comparator": "<=",
+                "value": 95,
+                "palette": "white_on_red"
+              }
+            ]
+          }
+        ],
+        "precision": 1,
+        "custom_unit": "%"
+      },
+      "layout": {
+        "x": 3,
+        "y": 0,
+        "width": 2,
+        "height": 2
+      }
+    },
+    {
+      "id": 3,
+      "definition": {
+        "title": "Response Time (P95)",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "p95:azure.web_sites.http_response_time{service:ajudadorabot}",
+            "aggregator": "avg",
+            "conditional_formats": [
+              {
+                "comparator": "<",
+                "value": 2000,
+                "palette": "white_on_green"
+              },
+              {
+                "comparator": ">=",
+                "value": 5000,
+                "palette": "white_on_red"
+              },
+              {
+                "comparator": ">=",
+                "value": 2000,
+                "palette": "white_on_yellow"
+              }
+            ]
+          }
+        ],
+        "precision": 0,
+        "custom_unit": "ms"
+      },
+      "layout": {
+        "x": 5,
+        "y": 0,
+        "width": 2,
+        "height": 2
+      }
+    },
+    {
+      "id": 4,
+      "definition": {
+        "title": "CPU Usage (Free Tier: 60min/day limit)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:azure.web_sites.cpu_percentage{service:ajudadorabot}",
+            "display_type": "line",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
+          }
+        ],
+        "yaxis": {
+          "min": "0",
+          "max": "100",
+          "scale": "linear",
+          "label": "CPU %"
+        },
+        "markers": [
+          {
+            "value": "y = 70",
+            "display_type": "error dashed"
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 3,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "id": 5,
+      "definition": {
+        "title": "Memory Usage (1GB total limit)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:azure.web_sites.memory_percentage{service:ajudadorabot}",
+            "display_type": "line",
+            "style": {
+              "palette": "purple",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
+          }
+        ],
+        "yaxis": {
+          "min": "0",
+          "max": "100",
+          "scale": "linear",
+          "label": "Memory %"
+        },
+        "markers": [
+          {
+            "value": "y = 80",
+            "display_type": "warning dashed"
+          },
+          {
+            "value": "y = 90",
+            "display_type": "error dashed"
+          }
+        ]
+      },
+      "layout": {
+        "x": 6,
+        "y": 3,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "id": 6,
+      "definition": {
+        "title": "Bandwidth Usage (165MB/day limit)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:azure.web_sites.bytes_sent{service:ajudadorabot}.rollup(sum, 3600)",
+            "display_type": "bars",
+            "style": {
+              "palette": "orange",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
+          }
+        ],
+        "yaxis": {
+          "scale": "linear",
+          "label": "Bytes/hour"
+        },
+        "markers": [
+          {
+            "value": "y = 6875000",
+            "display_type": "error dashed",
+            "label": "~165MB/day limit"
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 6,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "id": 7,
+      "definition": {
+        "title": "Request Rate",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:azure.web_sites.requests{service:ajudadorabot}.as_rate()",
+            "display_type": "line",
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
+          }
+        ],
+        "yaxis": {
+          "scale": "linear",
+          "label": "Requests/sec"
+        }
+      },
+      "layout": {
+        "x": 6,
+        "y": 6,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "id": 8,
+      "definition": {
+        "title": "HTTP Status Codes",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:azure.web_sites.http_2xx{service:ajudadorabot}.as_count()",
+            "display_type": "bars",
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "2xx Success"
+          },
+          {
+            "q": "sum:azure.web_sites.http_4xx{service:ajudadorabot}.as_count()",
+            "display_type": "bars",
+            "style": {
+              "palette": "orange",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "4xx Client Error"
+          },
+          {
+            "q": "sum:azure.web_sites.http_5xx{service:ajudadorabot}.as_count()",
+            "display_type": "bars",
+            "style": {
+              "palette": "red",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "5xx Server Error"
+          }
+        ],
+        "yaxis": {
+          "scale": "linear",
+          "label": "Count"
+        }
+      },
+      "layout": {
+        "x": 0,
+        "y": 9,
+        "width": 12,
+        "height": 3
+      }
+    },
+    {
+      "id": 9,
+      "definition": {
+        "title": "Database Performance (SQLite)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:custom.database.query_duration{service:ajudadorabot}",
+            "display_type": "line",
+            "style": {
+              "palette": "purple",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "Query Duration"
+          },
+          {
+            "q": "sum:custom.database.connections{service:ajudadorabot}",
+            "display_type": "line",
+            "style": {
+              "palette": "blue",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "Active Connections"
+          }
+        ],
+        "yaxis": {
+          "scale": "linear"
+        }
+      },
+      "layout": {
+        "x": 0,
+        "y": 12,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "id": 10,
+      "definition": {
+        "title": "Telegram Bot Metrics",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:custom.telegram.messages_received{service:ajudadorabot}.as_count()",
+            "display_type": "bars",
+            "style": {
+              "palette": "blue",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "Messages Received"
+          },
+          {
+            "q": "sum:custom.telegram.messages_sent{service:ajudadorabot}.as_count()",
+            "display_type": "bars",
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "Messages Sent"
+          },
+          {
+            "q": "sum:custom.telegram.webhook_calls{service:ajudadorabot}.as_count()",
+            "display_type": "line",
+            "style": {
+              "palette": "purple",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "alias": "Webhook Calls"
+          }
+        ],
+        "yaxis": {
+          "scale": "linear",
+          "label": "Count"
+        }
+      },
+      "layout": {
+        "x": 6,
+        "y": 12,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "id": 11,
+      "definition": {
+        "title": "Error Logs (Last 4 hours)",
+        "type": "log_stream",
+        "query": "service:ajudadorabot status:error",
+        "columns": ["timestamp", "service", "message"],
+        "message_display": "expanded-md",
+        "show_date_column": true,
+        "show_message_column": true,
+        "sort": {
+          "column": "timestamp",
+          "order": "desc"
+        }
+      },
+      "layout": {
+        "x": 0,
+        "y": 15,
+        "width": 12,
+        "height": 4
+      }
+    },
+    {
+      "id": 12,
+      "definition": {
+        "title": "Free Tier Usage Summary",
+        "type": "query_table",
+        "requests": [
+          {
+            "q": "avg:azure.web_sites.cpu_percentage{service:ajudadorabot}",
+            "alias": "Avg CPU %",
+            "aggregator": "avg",
+            "limit": 1
+          },
+          {
+            "q": "avg:azure.web_sites.memory_percentage{service:ajudadorabot}",
+            "alias": "Avg Memory %",
+            "aggregator": "avg",
+            "limit": 1
+          },
+          {
+            "q": "sum:azure.web_sites.bytes_sent{service:ajudadorabot}",
+            "alias": "Total Bytes Sent",
+            "aggregator": "sum",
+            "limit": 1
+          },
+          {
+            "q": "sum:azure.web_sites.requests{service:ajudadorabot}",
+            "alias": "Total Requests",
+            "aggregator": "sum",
+            "limit": 1
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 19,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "id": 13,
+      "definition": {
+        "title": "Cost Optimization Alerts",
+        "type": "alert_graph",
+        "alert_id": "your-alert-id-here",
+        "viz_type": "timeseries",
+        "time": {
+          "live_span": "4h"
+        }
+      },
+      "layout": {
+        "x": 6,
+        "y": 19,
+        "width": 6,
+        "height": 3
+      }
+    }
+  ],
+  "template_variables": [
+    {
+      "name": "service",
+      "default": "ajudadorabot",
+      "prefix": "service"
+    },
+    {
+      "name": "env",
+      "default": "production",
+      "prefix": "env"
+    }
+  ],
+  "layout_type": "ordered",
+  "is_read_only": false,
+  "notify_list": [],
+  "id": "free-tier-monitoring",
+  "reflow_type": "fixed"
+}

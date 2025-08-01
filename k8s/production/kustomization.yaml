@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: ajudadorabot-production
+
+namespace: ajudadorabot-production
+
+resources:
+- ../base/namespace.yaml
+- ../base/configmap.yaml
+- ../base/deployment.yaml
+- ../base/service.yaml
+- ../base/ingress.yaml
+- ../base/pvc.yaml
+- ../base/rbac.yaml
+- ../base/hpa.yaml
+- secrets.yaml
+- pdb.yaml
+- network-policy.yaml
+
+patchesStrategicMerge:
+- deployment-patch.yaml
+- ingress-patch.yaml
+
+images:
+- name: ghcr.io/yourusername/ajudadorabot
+  newTag: latest
+
+commonLabels:
+  environment: production
+  app.kubernetes.io/instance: ajudadorabot-production
+
+configMapGenerator:
+- name: ajudadorabot-config-production
+  files:
+  - appsettings.production.json
+  options:
+    disableNameSuffixHash: true
+
+secretGenerator:
+- name: ajudadorabot-secrets-production
+  envs:
+  - .env.production
+  options:
+    disableNameSuffixHash: true
+
+replicas:
+- name: ajudadorabot-api
+  count: 3
+- name: ajudadorabot-nginx
+  count: 2

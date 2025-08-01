@@ -1,0 +1,274 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ajudadorabot-api
+  labels:
+    app.kubernetes.io/name: ajudadorabot
+    app.kubernetes.io/component: api
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ajudadorabot
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ajudadorabot
+        app.kubernetes.io/component: api
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        config.linkerd.io/skip-outbound-ports: "443"
+    spec:
+      serviceAccountName: ajudadorabot-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: api
+        image: ghcr.io/yourusername/ajudadorabot:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Data Source=/app/data/ajudadorabot.db"
+        - name: TelegramBot__Token
+          valueFrom:
+            secretKeyRef:
+              name: ajudadorabot-secrets
+              key: telegram-bot-token
+        - name: TelegramBot__WebhookUrl
+          valueFrom:
+            secretKeyRef:
+              name: ajudadorabot-secrets
+              key: webhook-url
+        - name: TelegramBot__SecretToken
+          valueFrom:
+            secretKeyRef:
+              name: ajudadorabot-secrets
+              key: webhook-secret-token
+        - name: MiniApp__JwtSecret
+          valueFrom:
+            secretKeyRef:
+              name: ajudadorabot-secrets
+              key: jwt-secret
+        - name: MiniApp__AllowedOrigins__0
+          valueFrom:
+            configMapKeyRef:
+              name: ajudadorabot-config
+              key: allowed-origin-0
+              optional: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30
+        volumeMounts:
+        - name: app-config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.json
+          readOnly: true
+        - name: data-volume
+          mountPath: /app/data
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: temp-volume
+          mountPath: /tmp
+      volumes:
+      - name: app-config
+        configMap:
+          name: ajudadorabot-config
+          items:
+          - key: appsettings.json
+            path: appsettings.json
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: ajudadorabot-data-pvc
+      - name: logs-volume
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: temp-volume
+        emptyDir:
+          sizeLimit: 100Mi
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - ajudadorabot
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - api
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ajudadorabot-nginx
+  labels:
+    app.kubernetes.io/name: ajudadorabot
+    app.kubernetes.io/component: nginx
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ajudadorabot
+      app.kubernetes.io/component: nginx
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ajudadorabot
+        app.kubernetes.io/component: nginx
+        app.kubernetes.io/version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpine
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 101
+          runAsGroup: 101
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+      - name: nginx-cache
+        emptyDir:
+          sizeLimit: 100Mi
+      - name: nginx-run
+        emptyDir:
+          sizeLimit: 10Mi
+      - name: nginx-logs
+        emptyDir:
+          sizeLimit: 100Mi

@@ -1,0 +1,22 @@
+# Development overrides for docker-compose.yml
+version: '3.8'
+
+services:
+  ajudadorabot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_LOGGING__LOGLEVEL__DEFAULT=Debug
+      - ASPNETCORE_LOGGING__LOGLEVEL__AJUDADORABOT=Debug
+    volumes:
+      # Enable hot reload for development
+      - ./src:/app/src
+      - ./frontend:/app/wwwroot
+    command: ["dotnet", "watch", "run", "--project", "/app/src/AjudadoraBot.Api/AjudadoraBot.Api.csproj"]
+
+  nginx:
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro

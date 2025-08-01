@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ajudadorabot-api
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: api
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: TelegramBot__Token
+          valueFrom:
+            secretKeyRef:
+              name: ajudadorabot-secrets-production
+              key: telegram-bot-token
+        - name: TelegramBot__WebhookUrl
+          value: "https://ajudadorabot.com/webhook"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ajudadorabot-nginx
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+      - name: nginx
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

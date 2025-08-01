@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ajudadorabot
+  labels:
+    name: ajudadorabot
+    app.kubernetes.io/name: ajudadorabot
+    app.kubernetes.io/component: namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ajudadorabot-staging
+  labels:
+    name: ajudadorabot-staging
+    app.kubernetes.io/name: ajudadorabot
+    app.kubernetes.io/component: namespace
+    environment: staging
+---
+apiVersion: v1
+kind: Namespace  
+metadata:
+  name: ajudadorabot-production
+  labels:
+    name: ajudadorabot-production
+    app.kubernetes.io/name: ajudadorabot
+    app.kubernetes.io/component: namespace
+    environment: production

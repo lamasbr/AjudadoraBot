@@ -1,0 +1,176 @@
+# Cost-Optimized Dockerfile for Azure App Service Free Tier (F1)
+# Combines backend API and frontend into single container for cost efficiency
+# Optimized for GitHub Container Registry (free) and minimal resource usage
+
+# ================================
+# Frontend Build Stage
+# ================================
+FROM node:20-alpine AS frontend-build
+
+# Build arguments
+ARG BUILD_DATE
+ARG VERSION="1.0.0"
+
+# Install security updates and minimal build dependencies
+RUN apk upgrade --no-cache && \
+    apk add --no-cache git
+
+# Set working directory
+WORKDIR /frontend-src
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+
+# Install only production dependencies (no dev dependencies to save space)
+RUN npm ci --only=production --no-audit --no-fund --ignore-scripts && \
+    npm cache clean --force
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Optimize static files for production and compress
+RUN find . -name "*.js" -not -path "./node_modules/*" -exec gzip -k {} \; 2>/dev/null || true && \
+    find . -name "*.css" -not -path "./node_modules/*" -exec gzip -k {} \; 2>/dev/null || true && \
+    find . -name "*.html" -not -path "./node_modules/*" -exec gzip -k {} \; 2>/dev/null || true
+
+# Remove unnecessary files to minimize size
+RUN rm -rf node_modules package*.json && \
+    find . -name "*.md" -delete && \
+    find . -name "Dockerfile*" -delete
+
+# ================================
+# Backend Build Stage
+# ================================
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS backend-build
+
+# Build arguments
+ARG BUILD_DATE
+ARG VERSION="1.0.0"
+ARG BUILDKIT_INLINE_CACHE=1
+
+# Install security updates
+RUN apk upgrade --no-cache && \
+    apk add --no-cache git curl
+
+WORKDIR /src
+
+# Copy solution and project files for optimized layer caching
+COPY *.sln ./
+COPY src/AjudadoraBot.Api/AjudadoraBot.Api.csproj src/AjudadoraBot.Api/
+COPY src/AjudadoraBot.Core/AjudadoraBot.Core.csproj src/AjudadoraBot.Core/
+COPY src/AjudadoraBot.Infrastructure/AjudadoraBot.Infrastructure.csproj src/AjudadoraBot.Infrastructure/
+
+# Restore dependencies with optimization for Azure App Service
+RUN dotnet restore --runtime linux-musl-x64 --no-cache --verbosity minimal
+
+# Copy source code
+COPY src/ src/
+
+# Build and publish with production optimizations for F1 tier
+RUN dotnet build -c Release --no-restore --runtime linux-musl-x64 --verbosity minimal && \
+    dotnet publish src/AjudadoraBot.Api/AjudadoraBot.Api.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    --runtime linux-musl-x64 \
+    --self-contained false \
+    --verbosity minimal \
+    -p:PublishReadyToRun=true \
+    -p:PublishSingleFile=false \
+    -p:PublishTrimmed=false \
+    -p:DebugType=None
+
+# Clean up build artifacts to reduce image size (critical for F1 storage limits)
+RUN find /app/publish -name "*.pdb" -delete && \
+    find /app/publish -name "*.xml" -delete && \
+    find /app/publish -name "*.Development.*" -delete
+
+# Create wwwroot directory and copy frontend files
+RUN mkdir -p /app/publish/wwwroot
+COPY --from=frontend-build /frontend-src /app/publish/wwwroot/
+
+# ================================
+# Production Runtime Stage
+# ================================
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+
+# Build metadata
+ARG BUILD_DATE
+ARG VERSION
+
+# Install security updates and minimal runtime dependencies for F1 tier
+RUN apk upgrade --no-cache && \
+    apk add --no-cache \
+    curl \
+    ca-certificates \
+    tzdata \
+    icu-libs \
+    bash \
+    && rm -rf /var/cache/apk/*
+
+# Create application user with minimal privileges
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup -h /home/appuser -s /bin/bash
+
+# Set environment variables optimized for Azure App Service F1 tier
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_USE_POLLING_FILE_WATCHER=true \
+    ASPNETCORE_URLS=http://+:8080 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    ASPNETCORE_FORWARDEDHEADERS_ENABLED=true \
+    ASPNETCORE_HTTP_PORTS=8080 \
+    TZ=UTC \
+    # Azure App Service F1 specific settings
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE=true \
+    WEBSITES_CONTAINER_START_TIME_LIMIT=230 \
+    PORT=8080 \
+    # Memory optimization for F1 tier (1GB limit)
+    DOTNET_GCHeapHardLimit=800000000 \
+    DOTNET_GCHeapHardLimitPercent=80 \
+    # Performance optimization for shared infrastructure
+    DOTNET_TieredCompilation=false \
+    DOTNET_ReadyToRun=1
+
+# Create necessary directories with proper permissions for F1 tier
+RUN mkdir -p /home/data /home/logs /home/tmp /app && \
+    chown -R appuser:appgroup /home/data /home/logs /home/tmp /app && \
+    chmod 755 /home/data /home/logs /home/tmp
+
+WORKDIR /app
+
+# Copy published application with proper ownership
+COPY --from=backend-build --chown=appuser:appgroup /app/publish ./
+
+# Ensure SQLite database directory exists with proper permissions
+RUN mkdir -p /home/data && \
+    chown appuser:appgroup /home/data && \
+    chmod 750 /home/data
+
+# Switch to non-root user for security
+USER appuser
+
+# Enhanced health check optimized for F1 tier constraints
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f --max-time 10 http://localhost:8080/health || exit 1
+
+# Expose the port that Azure App Service expects
+EXPOSE 8080
+
+# Production build metadata and labels
+LABEL maintainer="AjudadoraBot Team" \
+      org.opencontainers.image.title="AjudadoraBot Combined App" \
+      org.opencontainers.image.description="Cost-optimized combined backend API and frontend for Azure App Service F1 tier" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.source="https://github.com/yourusername/ajudadorabot" \
+      org.opencontainers.image.vendor="AjudadoraBot Team" \
+      org.opencontainers.image.licenses="MIT" \
+      azure.app-service.optimized="true" \
+      azure.app-service.tier="F1" \
+      cost.optimized="true" \
+      deployment.type="combined" \
+      datadog.monitored="true"
+
+# Use exec form for better signal handling in Azure App Service
+ENTRYPOINT ["dotnet", "AjudadoraBot.Api.dll"]

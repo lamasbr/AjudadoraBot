@@ -1,0 +1,158 @@
+# Alertmanager configuration for AjudadoraBot
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alertmanager@ajudadorabot.com'
+  smtp_auth_username: 'alertmanager@ajudadorabot.com'
+  smtp_auth_password: 'your-email-password'
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+# Define routing tree based on labels
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+  # Critical alerts - immediate notification
+  - match:
+      severity: critical
+    receiver: 'critical-alerts'
+    group_wait: 10s
+    repeat_interval: 5m
+    
+  # Warning alerts - less frequent notifications
+  - match:
+      severity: warning
+    receiver: 'warning-alerts'
+    group_wait: 30s
+    repeat_interval: 30m
+    
+  # Info alerts - daily digest
+  - match:
+      severity: info
+    receiver: 'info-alerts'
+    group_wait: 5m
+    repeat_interval: 24h
+    
+  # Business alerts - sent to business team
+  - match:
+      category: business
+    receiver: 'business-alerts'
+    group_wait: 1m
+    repeat_interval: 4h
+
+# Inhibition rules to prevent notification spam
+inhibit_rules:
+- source_match:
+    severity: 'critical'
+  target_match:
+    severity: 'warning'
+  equal: ['alertname', 'dev', 'instance']
+
+- source_match:
+    alertname: 'AjudadoraBotAPIDown'
+  target_match_re:
+    alertname: '(AjudadoraBotAPI.*|Database.*)'
+  equal: ['instance']
+
+# Notification receivers
+receivers:
+- name: 'web.hook'
+  webhook_configs:
+  - url: 'http://127.0.0.1:5001/'
+
+- name: 'critical-alerts'
+  email_configs:
+  - to: 'oncall@ajudadorabot.com'
+    subject: '🚨 CRITICAL: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    body: |
+      {{ range .Alerts }}
+      **Alert:** {{ .Annotations.summary }}
+      **Severity:** {{ .Labels.severity }}
+      **Description:** {{ .Annotations.description }}
+      **Instance:** {{ .Labels.instance }}
+      **Time:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+    headers:
+      X-Priority: '1'
+  
+  slack_configs:
+  - channel: '#alerts-critical'
+    title: '🚨 Critical Alert'
+    text: |
+      {{ range .Alerts }}
+      *{{ .Annotations.summary }}*
+      Severity: {{ .Labels.severity }}
+      {{ .Annotations.description }}
+      Instance: {{ .Labels.instance }}
+      {{ end }}
+    color: danger
+    send_resolved: true
+
+  webhook_configs:
+  - url: 'https://api.pagerduty.com/integration/YOUR_INTEGRATION_KEY/enqueue'
+    http_config:
+      bearer_token: 'your-pagerduty-token'
+
+- name: 'warning-alerts'
+  email_configs:
+  - to: 'team@ajudadorabot.com'
+    subject: '⚠️ Warning: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    body: |
+      {{ range .Alerts }}
+      **Alert:** {{ .Annotations.summary }}
+      **Severity:** {{ .Labels.severity }}
+      **Description:** {{ .Annotations.description }}
+      **Instance:** {{ .Labels.instance }}
+      **Time:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+  
+  slack_configs:
+  - channel: '#alerts-warning'
+    title: '⚠️ Warning Alert'
+    text: |
+      {{ range .Alerts }}
+      *{{ .Annotations.summary }}*
+      {{ .Annotations.description }}
+      Instance: {{ .Labels.instance }}
+      {{ end }}
+    color: warning
+    send_resolved: true
+
+- name: 'info-alerts'
+  slack_configs:
+  - channel: '#alerts-info'
+    title: 'ℹ️ Info Alert'
+    text: |
+      {{ range .Alerts }}
+      {{ .Annotations.summary }}
+      {{ .Annotations.description }}
+      {{ end }}
+    color: good
+    send_resolved: false
+
+- name: 'business-alerts'
+  email_configs:
+  - to: 'business@ajudadorabot.com'
+    subject: '📊 Business Alert: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    body: |
+      {{ range .Alerts }}
+      **Business Alert:** {{ .Annotations.summary }}
+      **Description:** {{ .Annotations.description }}
+      **Time:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+  
+  slack_configs:
+  - channel: '#business-metrics'
+    title: '📊 Business Alert'
+    text: |
+      {{ range .Alerts }}
+      {{ .Annotations.summary }}
+      {{ .Annotations.description }}
+      {{ end }}
+    color: '#36a64f'
+
+# Templates for custom notification formatting
+templates:
+- '/etc/alertmanager/templates/*.tmpl'

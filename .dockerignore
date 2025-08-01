@@ -1,0 +1,59 @@
+# Ignore build artifacts and temporary files
+**/bin/
+**/obj/
+**/out/
+**/.vs/
+
+# Test results
+test-results/
+coverage/
+coverage-report/
+load-test-reports/
+TestResults/
+
+# Node modules and build artifacts
+**/node_modules/
+**/npm-debug.log
+frontend/dist/
+frontend/coverage/
+
+# Git and CI/CD
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+**/*.md
+docs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Temporary files
+tmp/
+temp/
+*.tmp
