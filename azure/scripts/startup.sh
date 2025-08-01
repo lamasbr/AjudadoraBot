@@ -17,12 +17,22 @@ if [ ! -z "$AZURE_FILES_MOUNT_PATH" ] && [ ! -z "$AZURE_FILES_CONNECTION_STRING"
     # This section is for manual mounting if needed
 fi
 
-# Set database path for SQLite
+# Set database path for SQLite (matches appsettings.Production.json)
 export DATABASE_PATH="/home/data/ajudadorabot.db"
 
-# Create database directory if it doesn't exist
+# Create database directory if it doesn't exist and set permissions
 if [ ! -f "$DATABASE_PATH" ]; then
-    echo "Database file not found. It will be created on first run."
+    echo "Database file not found at $DATABASE_PATH. It will be created on first run."
+    echo "Database directory permissions:"
+    ls -la /home/data/
+fi
+
+# Verify directory is writable
+echo "Testing write permissions to /home/data..."
+if touch /home/data/write_test.tmp 2>/dev/null && rm -f /home/data/write_test.tmp 2>/dev/null; then
+    echo "Write permissions verified successfully"
+else
+    echo "WARNING: Cannot write to /home/data directory - database health checks will fail"
 fi
 
 # Set proper permissions for the application

@@ -31,10 +31,25 @@ builder.Services.Configure<AnalyticsOptions>(
 builder.Services.Configure<BackgroundServicesOptions>(
     builder.Configuration.GetSection(BackgroundServicesOptions.SectionName));
 
-// Database configuration
+// Database configuration with environment variable support
 builder.Services.AddDbContext<AjudadoraBotDbContext>(options =>
 {
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    // Allow override via environment variable for Azure App Service flexibility
+    var envConnectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING");
+    if (!string.IsNullOrEmpty(envConnectionString))
+    {
+        connectionString = envConnectionString;
+    }
+    
+    // For Azure App Service, ensure we use the correct writable directory
+    if (connectionString?.Contains("/app/data/") == true && Directory.Exists("/home/data"))
+    {
+        connectionString = connectionString.Replace("/app/data/", "/home/data/");
+    }
+
+    options.UseSqlite(connectionString);
     options.EnableSensitiveDataLogging(builder.Environment.IsDevelopment());
     options.EnableDetailedErrors(builder.Environment.IsDevelopment());
 });
@@ -114,9 +129,42 @@ if (miniAppOptions?.AllowedOrigins.Any() == true)
     });
 }
 
-// Health checks
+// Health checks with enhanced error reporting
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AjudadoraBotDbContext>();
+    .AddDbContextCheck<AjudadoraBotDbContext>(name: "AjudadoraBotDbContext", tags: new[] { "database", "sqlite" })
+    .AddCheck("database_write", () =>
+    {
+        try
+        {
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrEmpty(connectionString))
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Connection string not configured");
+
+            // Extract file path from connection string
+            var match = System.Text.RegularExpressions.Regex.Match(connectionString, @"Data Source=([^;]+)");
+            if (!match.Success)
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Invalid connection string format");
+
+            var dbPath = match.Groups[1].Value;
+            var dbDirectory = Path.GetDirectoryName(dbPath);
+            
+            if (!Directory.Exists(dbDirectory))
+            {
+                Directory.CreateDirectory(dbDirectory);
+            }
+
+            // Test write permissions
+            var testFile = Path.Combine(dbDirectory, "write_test.tmp");
+            File.WriteAllText(testFile, "test");
+            File.Delete(testFile);
+
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy($"Database directory writable: {dbDirectory}");
+        }
+        catch (Exception ex)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy($"Database write check failed: {ex.Message}");
+        }
+    }, tags: new[] { "database", "filesystem" });
 
 // Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -247,25 +295,61 @@ if (Directory.Exists(staticFilesPath))
     app.MapFallbackToFile("index.html");
 }
 
-// Database migration and seeding
+// Database migration and seeding with enhanced error handling
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AjudadoraBotDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     
     try
     {
-        await context.Database.EnsureCreatedAsync();
+        var connectionString = app.Configuration.GetConnectionString("DefaultConnection");
+        logger.LogInformation("Initializing database with connection string: {ConnectionString}", connectionString);
+        
+        // Ensure database directory exists
+        if (connectionString?.Contains("Data Source=") == true)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(connectionString, @"Data Source=([^;]+)");
+            if (match.Success)
+            {
+                var dbPath = match.Groups[1].Value;
+                var dbDirectory = Path.GetDirectoryName(dbPath);
+                if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+                {
+                    logger.LogInformation("Creating database directory: {DatabaseDirectory}", dbDirectory);
+                    Directory.CreateDirectory(dbDirectory);
+                }
+            }
+        }
+
+        // Test database connection
+        var canConnect = await context.Database.CanConnectAsync();
+        logger.LogInformation("Database connection test result: {CanConnect}", canConnect);
+
+        if (!canConnect)
+        {
+            logger.LogInformation("Creating database...");
+            await context.Database.EnsureCreatedAsync();
+        }
         
         // Run migrations if needed
-        if (context.Database.GetPendingMigrations().Any())
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
         {
+            logger.LogInformation("Applying {MigrationCount} pending migrations: {Migrations}", 
+                pendingMigrations.Count(), string.Join(", ", pendingMigrations));
             await context.Database.MigrateAsync();
         }
+        
+        logger.LogInformation("Database initialization completed successfully");
     }
     catch (Exception ex)
     {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database");
+        logger.LogError(ex, "Database initialization failed: {ErrorMessage}. Connection string: {ConnectionString}", 
+            ex.Message, app.Configuration.GetConnectionString("DefaultConnection"));
+        
+        // Don't throw - let the app start but health checks will fail
+        logger.LogWarning("Application will start but database health checks will fail until database issues are resolved");
     }
 }
 

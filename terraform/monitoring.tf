@@ -1,5 +1,8 @@
 # Cost monitoring and alerting for free tier optimization
+# DISABLED: Monitoring components commented out to reduce complexity and costs
+# To re-enable monitoring, uncomment the resources below and set enable_cost_alerts = true
 
+/*
 # Action Group for cost alerts
 resource "azurerm_monitor_action_group" "cost_alerts" {
   count               = var.enable_cost_alerts && var.alert_email != "" ? 1 : 0
@@ -20,6 +23,7 @@ resource "azurerm_monitor_action_group" "cost_alerts" {
 
   tags = local.common_tags
 }
+*/
 
 # CPU Usage Alert (important for F1 plan with 60 min/day limit)
 resource "azurerm_monitor_metric_alert" "cpu_usage" {
