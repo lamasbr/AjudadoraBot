@@ -1,0 +1,4358 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "AjudadoraBot Production API",
+    "description": "Production REST API for AjudadoraBot Telegram Bot with SQLite database",
+    "contact": {
+      "name": "AjudadoraBot Support",
+      "email": "support@ajudadorabot.com"
+    },
+    "version": "v1"
+  },
+  "paths": {
+    "/api/v1/Analytics/statistics": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/StatisticsPeriod"
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotStatisticsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Analytics/top-commands": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/StatisticsPeriod"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopCommandsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Analytics/user-activity": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/StatisticsPeriod"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ActivityGranularity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserActivityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Analytics/errors": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/StatisticsPeriod"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorStatisticsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Auth/telegram-webapp": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramWebAppAuthRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramWebAppAuthRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramWebAppAuthRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Bot/info": {
+      "get": {
+        "tags": [
+          "Bot"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotInfoResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Bot/start": {
+      "post": {
+        "tags": [
+          "Bot"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Bot/stop": {
+      "post": {
+        "tags": [
+          "Bot"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Bot/webhook": {
+      "post": {
+        "tags": [
+          "Bot"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWebhookRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWebhookRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Bot"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Bot/send-message": {
+      "post": {
+        "tags": [
+          "Bot"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponsePaginatedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Users/{telegramId}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "telegramId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Users/{telegramId}/block-status": {
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "telegramId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBlockStatusRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBlockStatusRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBlockStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Users/{telegramId}/interactions": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "telegramId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionResponsePaginatedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Webhook/telegram/{secretToken}": {
+      "post": {
+        "tags": [
+          "Webhook"
+        ],
+        "parameters": [
+          {
+            "name": "secretToken",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Webhook/health": {
+      "get": {
+        "tags": [
+          "Webhook"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivityDataPoint": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messageCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "activeUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "commandCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ActivityGranularity": {
+        "enum": [
+          "Hourly",
+          "Daily",
+          "Weekly",
+          "Monthly"
+        ],
+        "type": "string"
+      },
+      "Animation": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/PhotoSize"
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Audio": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "performer": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/PhotoSize"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "nullable": true
+          },
+          "tokenType": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BackgroundType": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/BackgroundTypeKind"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BackgroundTypeKind": {
+        "enum": [
+          "Fill",
+          "Wallpaper",
+          "Pattern",
+          "ChatTheme"
+        ],
+        "type": "string"
+      },
+      "BotInfoResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string",
+            "nullable": true
+          },
+          "webhookUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastActivity": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "activeUsers": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BotStatisticsResponse": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/StatisticsPeriod"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "activeUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalMessages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCommands": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "blockedUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageResponseTime": {
+            "type": "number",
+            "format": "double"
+          },
+          "successfulInteractions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedInteractions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "successRate": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BusinessConnection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "userChatId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canReply": {
+            "type": "boolean"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BusinessMessagesDeleted": {
+        "type": "object",
+        "properties": {
+          "businessConnectionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "messageIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CallbackGame": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CallbackQuery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "message": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "inlineMessageId": {
+            "type": "string",
+            "nullable": true
+          },
+          "chatInstance": {
+            "type": "string",
+            "nullable": true
+          },
+          "data": {
+            "type": "string",
+            "nullable": true
+          },
+          "gameShortName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Chat": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ChatType"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isForum": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatBackground": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/BackgroundType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatBoost": {
+        "type": "object",
+        "properties": {
+          "boostId": {
+            "type": "string",
+            "nullable": true
+          },
+          "addDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expirationDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ChatBoostSource"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatBoostAdded": {
+        "type": "object",
+        "properties": {
+          "boostCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatBoostRemoved": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "boostId": {
+            "type": "string",
+            "nullable": true
+          },
+          "removeDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ChatBoostSource"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatBoostSource": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/ChatBoostSourceType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatBoostSourceType": {
+        "enum": [
+          "Premium",
+          "GiftCode",
+          "Giveaway"
+        ],
+        "type": "string"
+      },
+      "ChatBoostUpdated": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "boost": {
+            "$ref": "#/components/schemas/ChatBoost"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatInviteLink": {
+        "type": "object",
+        "properties": {
+          "inviteLink": {
+            "type": "string",
+            "nullable": true
+          },
+          "creator": {
+            "$ref": "#/components/schemas/User"
+          },
+          "createsJoinRequest": {
+            "type": "boolean"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "isRevoked": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "expireDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "memberLimit": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pendingJoinRequestCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "subscriptionPeriod": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "subscriptionPrice": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatJoinRequest": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "userChatId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true
+          },
+          "inviteLink": {
+            "$ref": "#/components/schemas/ChatInviteLink"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatMember": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ChatMemberStatus"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatMemberStatus": {
+        "enum": [
+          "Creator",
+          "Administrator",
+          "Member",
+          "Left",
+          "Kicked",
+          "Restricted"
+        ],
+        "type": "string"
+      },
+      "ChatMemberUpdated": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "oldChatMember": {
+            "$ref": "#/components/schemas/ChatMember"
+          },
+          "newChatMember": {
+            "$ref": "#/components/schemas/ChatMember"
+          },
+          "inviteLink": {
+            "$ref": "#/components/schemas/ChatInviteLink"
+          },
+          "viaJoinRequest": {
+            "type": "boolean"
+          },
+          "viaChatFolderInviteLink": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatShared": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chatId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "photo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhotoSize"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChatType": {
+        "enum": [
+          "Private",
+          "Group",
+          "Channel",
+          "Supergroup",
+          "Sender"
+        ],
+        "type": "string"
+      },
+      "ChosenInlineResult": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "string",
+            "nullable": true
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "inlineMessageId": {
+            "type": "string",
+            "nullable": true
+          },
+          "query": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CommandUsageItem": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "nullable": true
+          },
+          "usageCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "uniqueUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageResponseTime": {
+            "type": "number",
+            "format": "double"
+          },
+          "successRate": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Contact": {
+        "type": "object",
+        "properties": {
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "vcard": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CopyTextButton": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Dice": {
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string",
+            "nullable": true
+          },
+          "value": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/PhotoSize"
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EncryptedCredentials": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "nullable": true
+          },
+          "hash": {
+            "type": "string",
+            "nullable": true
+          },
+          "secret": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EncryptedPassportElement": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/EncryptedPassportElementType"
+          },
+          "data": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PassportFile"
+            },
+            "nullable": true
+          },
+          "frontSide": {
+            "$ref": "#/components/schemas/PassportFile"
+          },
+          "reverseSide": {
+            "$ref": "#/components/schemas/PassportFile"
+          },
+          "selfie": {
+            "$ref": "#/components/schemas/PassportFile"
+          },
+          "translation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PassportFile"
+            },
+            "nullable": true
+          },
+          "hash": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EncryptedPassportElementType": {
+        "enum": [
+          "PersonalDetails",
+          "Passport",
+          "DriverLicense",
+          "IdentityCard",
+          "InternalPassport",
+          "Address",
+          "UtilityBill",
+          "BankStatement",
+          "RentalAgreement",
+          "PassportRegistration",
+          "TemporaryRegistration",
+          "PhoneNumber",
+          "Email"
+        ],
+        "type": "string"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "traceId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ErrorStatisticsResponse": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/StatisticsPeriod"
+          },
+          "totalErrors": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "errorsByType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorTypeCount"
+            },
+            "nullable": true
+          },
+          "recentErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecentErrorItem"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ErrorTypeCount": {
+        "type": "object",
+        "properties": {
+          "errorType": {
+            "type": "string",
+            "nullable": true
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "percentage": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExternalReplyInfo": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "$ref": "#/components/schemas/MessageOrigin"
+          },
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "messageId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "linkPreviewOptions": {
+            "$ref": "#/components/schemas/LinkPreviewOptions"
+          },
+          "animation": {
+            "$ref": "#/components/schemas/Animation"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/Audio"
+          },
+          "document": {
+            "$ref": "#/components/schemas/Document"
+          },
+          "paidMedia": {
+            "$ref": "#/components/schemas/PaidMediaInfo"
+          },
+          "photo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhotoSize"
+            },
+            "nullable": true
+          },
+          "sticker": {
+            "$ref": "#/components/schemas/Sticker"
+          },
+          "story": {
+            "$ref": "#/components/schemas/Story"
+          },
+          "video": {
+            "$ref": "#/components/schemas/Video"
+          },
+          "videoNote": {
+            "$ref": "#/components/schemas/VideoNote"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/Voice"
+          },
+          "hasMediaSpoiler": {
+            "type": "boolean"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/Contact"
+          },
+          "dice": {
+            "$ref": "#/components/schemas/Dice"
+          },
+          "game": {
+            "$ref": "#/components/schemas/Game"
+          },
+          "giveaway": {
+            "$ref": "#/components/schemas/Giveaway"
+          },
+          "giveawayWinners": {
+            "$ref": "#/components/schemas/GiveawayWinners"
+          },
+          "invoice": {
+            "$ref": "#/components/schemas/Invoice"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "poll": {
+            "$ref": "#/components/schemas/Poll"
+          },
+          "venue": {
+            "$ref": "#/components/schemas/Venue"
+          }
+        },
+        "additionalProperties": false
+      },
+      "File": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "filePath": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ForumTopicClosed": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ForumTopicCreated": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "iconColor": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "iconCustomEmojiId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ForumTopicEdited": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "iconCustomEmojiId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ForumTopicReopened": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "Game": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "photo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhotoSize"
+            },
+            "nullable": true
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "textEntities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageEntity"
+            },
+            "nullable": true
+          },
+          "animation": {
+            "$ref": "#/components/schemas/Animation"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GeneralForumTopicHidden": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "GeneralForumTopicUnhidden": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "Giveaway": {
+        "type": "object",
+        "properties": {
+          "chats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Chat"
+            },
+            "nullable": true
+          },
+          "winnersSelectionDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "winnerCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "onlyNewMembers": {
+            "type": "boolean"
+          },
+          "hasPublicWinners": {
+            "type": "boolean"
+          },
+          "prizeDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "countryCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "prizeStarCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "premiumSubscriptionMonthCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GiveawayCompleted": {
+        "type": "object",
+        "properties": {
+          "winnerCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unclaimedPrizeCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "giveawayMessage": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "isStarGiveaway": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GiveawayCreated": {
+        "type": "object",
+        "properties": {
+          "prizeStarCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GiveawayWinners": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "giveawayMessageId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "winnersSelectionDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "winnerCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "winners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "nullable": true
+          },
+          "additionalChatCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "prizeStarCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "premiumSubscriptionMonthCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "unclaimedPrizeCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "onlyNewMembers": {
+            "type": "boolean"
+          },
+          "wasRefunded": {
+            "type": "boolean"
+          },
+          "prizeDescription": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "service": {
+            "type": "string",
+            "nullable": true
+          },
+          "additionalInfo": {
+            "type": "object",
+            "additionalProperties": { },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InlineKeyboardButton": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "callbackData": {
+            "type": "string",
+            "nullable": true
+          },
+          "webApp": {
+            "$ref": "#/components/schemas/WebAppInfo"
+          },
+          "loginUrl": {
+            "$ref": "#/components/schemas/LoginUrl"
+          },
+          "switchInlineQuery": {
+            "type": "string",
+            "nullable": true
+          },
+          "switchInlineQueryCurrentChat": {
+            "type": "string",
+            "nullable": true
+          },
+          "switchInlineQueryChosenChat": {
+            "$ref": "#/components/schemas/SwitchInlineQueryChosenChat"
+          },
+          "copyText": {
+            "$ref": "#/components/schemas/CopyTextButton"
+          },
+          "callbackGame": {
+            "$ref": "#/components/schemas/CallbackGame"
+          },
+          "pay": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InlineKeyboardMarkup": {
+        "type": "object",
+        "properties": {
+          "inlineKeyboard": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/InlineKeyboardButton"
+              }
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InlineQuery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "query": {
+            "type": "string",
+            "nullable": true
+          },
+          "offset": {
+            "type": "string",
+            "nullable": true
+          },
+          "chatType": {
+            "$ref": "#/components/schemas/ChatType"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InteractionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "command": {
+            "type": "string",
+            "nullable": true
+          },
+          "messageText": {
+            "type": "string",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isSuccessful": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "responseText": {
+            "type": "string",
+            "nullable": true
+          },
+          "processingTime": {
+            "type": "string",
+            "format": "date-span",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InteractionResponsePaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InteractionResponse"
+            },
+            "nullable": true
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "startParameter": {
+            "type": "string",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalAmount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LinkPreviewOptions": {
+        "type": "object",
+        "properties": {
+          "isDisabled": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "preferSmallMedia": {
+            "type": "boolean"
+          },
+          "preferLargeMedia": {
+            "type": "boolean"
+          },
+          "showAboveText": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "horizontalAccuracy": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "livePeriod": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "heading": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "proximityAlertRadius": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LoginUrl": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "forwardText": {
+            "type": "string",
+            "nullable": true
+          },
+          "botUsername": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestWriteAccess": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LogoutRequest": {
+        "required": [
+          "sessionToken"
+        ],
+        "type": "object",
+        "properties": {
+          "sessionToken": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MaskPosition": {
+        "type": "object",
+        "properties": {
+          "point": {
+            "$ref": "#/components/schemas/MaskPositionPoint"
+          },
+          "xShift": {
+            "type": "number",
+            "format": "double"
+          },
+          "yShift": {
+            "type": "number",
+            "format": "double"
+          },
+          "scale": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MaskPositionPoint": {
+        "enum": [
+          "Forehead",
+          "Eyes",
+          "Mouth",
+          "Chin"
+        ],
+        "type": "string"
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "messageThreadId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "senderChat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "senderBoostCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "senderBusinessBot": {
+            "$ref": "#/components/schemas/User"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "businessConnectionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "forwardOrigin": {
+            "$ref": "#/components/schemas/MessageOrigin"
+          },
+          "isTopicMessage": {
+            "type": "boolean"
+          },
+          "isAutomaticForward": {
+            "type": "boolean"
+          },
+          "replyToMessage": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "externalReply": {
+            "$ref": "#/components/schemas/ExternalReplyInfo"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/TextQuote"
+          },
+          "replyToStory": {
+            "$ref": "#/components/schemas/Story"
+          },
+          "viaBot": {
+            "$ref": "#/components/schemas/User"
+          },
+          "editDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "hasProtectedContent": {
+            "type": "boolean"
+          },
+          "isFromOffline": {
+            "type": "boolean"
+          },
+          "mediaGroupId": {
+            "type": "string",
+            "nullable": true
+          },
+          "authorSignature": {
+            "type": "string",
+            "nullable": true
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageEntity"
+            },
+            "nullable": true
+          },
+          "linkPreviewOptions": {
+            "$ref": "#/components/schemas/LinkPreviewOptions"
+          },
+          "effectId": {
+            "type": "string",
+            "nullable": true
+          },
+          "animation": {
+            "$ref": "#/components/schemas/Animation"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/Audio"
+          },
+          "document": {
+            "$ref": "#/components/schemas/Document"
+          },
+          "paidMedia": {
+            "$ref": "#/components/schemas/PaidMediaInfo"
+          },
+          "photo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhotoSize"
+            },
+            "nullable": true
+          },
+          "sticker": {
+            "$ref": "#/components/schemas/Sticker"
+          },
+          "story": {
+            "$ref": "#/components/schemas/Story"
+          },
+          "video": {
+            "$ref": "#/components/schemas/Video"
+          },
+          "videoNote": {
+            "$ref": "#/components/schemas/VideoNote"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/Voice"
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true
+          },
+          "captionEntities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageEntity"
+            },
+            "nullable": true
+          },
+          "showCaptionAboveMedia": {
+            "type": "boolean"
+          },
+          "hasMediaSpoiler": {
+            "type": "boolean"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/Contact"
+          },
+          "dice": {
+            "$ref": "#/components/schemas/Dice"
+          },
+          "game": {
+            "$ref": "#/components/schemas/Game"
+          },
+          "poll": {
+            "$ref": "#/components/schemas/Poll"
+          },
+          "venue": {
+            "$ref": "#/components/schemas/Venue"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "newChatMembers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "nullable": true
+          },
+          "leftChatMember": {
+            "$ref": "#/components/schemas/User"
+          },
+          "newChatTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "newChatPhoto": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhotoSize"
+            },
+            "nullable": true
+          },
+          "deleteChatPhoto": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "groupChatCreated": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "supergroupChatCreated": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "channelChatCreated": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "messageAutoDeleteTimerChanged": {
+            "$ref": "#/components/schemas/MessageAutoDeleteTimerChanged"
+          },
+          "migrateToChatId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "migrateFromChatId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "pinnedMessage": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "invoice": {
+            "$ref": "#/components/schemas/Invoice"
+          },
+          "successfulPayment": {
+            "$ref": "#/components/schemas/SuccessfulPayment"
+          },
+          "refundedPayment": {
+            "$ref": "#/components/schemas/RefundedPayment"
+          },
+          "usersShared": {
+            "$ref": "#/components/schemas/UsersShared"
+          },
+          "chatShared": {
+            "$ref": "#/components/schemas/ChatShared"
+          },
+          "connectedWebsite": {
+            "type": "string",
+            "nullable": true
+          },
+          "writeAccessAllowed": {
+            "$ref": "#/components/schemas/WriteAccessAllowed"
+          },
+          "passportData": {
+            "$ref": "#/components/schemas/PassportData"
+          },
+          "proximityAlertTriggered": {
+            "$ref": "#/components/schemas/ProximityAlertTriggered"
+          },
+          "boostAdded": {
+            "$ref": "#/components/schemas/ChatBoostAdded"
+          },
+          "chatBackgroundSet": {
+            "$ref": "#/components/schemas/ChatBackground"
+          },
+          "forumTopicCreated": {
+            "$ref": "#/components/schemas/ForumTopicCreated"
+          },
+          "forumTopicEdited": {
+            "$ref": "#/components/schemas/ForumTopicEdited"
+          },
+          "forumTopicClosed": {
+            "$ref": "#/components/schemas/ForumTopicClosed"
+          },
+          "forumTopicReopened": {
+            "$ref": "#/components/schemas/ForumTopicReopened"
+          },
+          "generalForumTopicHidden": {
+            "$ref": "#/components/schemas/GeneralForumTopicHidden"
+          },
+          "generalForumTopicUnhidden": {
+            "$ref": "#/components/schemas/GeneralForumTopicUnhidden"
+          },
+          "giveawayCreated": {
+            "$ref": "#/components/schemas/GiveawayCreated"
+          },
+          "giveaway": {
+            "$ref": "#/components/schemas/Giveaway"
+          },
+          "giveawayWinners": {
+            "$ref": "#/components/schemas/GiveawayWinners"
+          },
+          "giveawayCompleted": {
+            "$ref": "#/components/schemas/GiveawayCompleted"
+          },
+          "videoChatScheduled": {
+            "$ref": "#/components/schemas/VideoChatScheduled"
+          },
+          "videoChatStarted": {
+            "$ref": "#/components/schemas/VideoChatStarted"
+          },
+          "videoChatEnded": {
+            "$ref": "#/components/schemas/VideoChatEnded"
+          },
+          "videoChatParticipantsInvited": {
+            "$ref": "#/components/schemas/VideoChatParticipantsInvited"
+          },
+          "webAppData": {
+            "$ref": "#/components/schemas/WebAppData"
+          },
+          "replyMarkup": {
+            "$ref": "#/components/schemas/InlineKeyboardMarkup"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MessageAutoDeleteTimerChanged": {
+        "type": "object",
+        "properties": {
+          "messageAutoDeleteTime": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MessageEntity": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/MessageEntityType"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "length": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "customEmojiId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MessageEntityType": {
+        "enum": [
+          "Mention",
+          "Hashtag",
+          "BotCommand",
+          "Url",
+          "Email",
+          "Bold",
+          "Italic",
+          "Code",
+          "Pre",
+          "TextLink",
+          "TextMention",
+          "PhoneNumber",
+          "Cashtag",
+          "Underline",
+          "Strikethrough",
+          "Spoiler",
+          "CustomEmoji",
+          "Blockquote",
+          "ExpandableBlockquote"
+        ],
+        "type": "string"
+      },
+      "MessageOrigin": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/MessageOriginType"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MessageOriginType": {
+        "enum": [
+          "User",
+          "HiddenUser",
+          "Chat",
+          "Channel"
+        ],
+        "type": "string"
+      },
+      "MessageReactionCountUpdated": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "messageId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReactionCount"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MessageReactionUpdated": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "messageId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "actorChat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "oldReaction": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReactionType"
+            },
+            "nullable": true
+          },
+          "newReaction": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReactionType"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chatId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OperationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/ShippingAddress"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaidMedia": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/PaidMediaType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaidMediaInfo": {
+        "type": "object",
+        "properties": {
+          "starCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paidMedia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaidMedia"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaidMediaPurchased": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "paidMediaPayload": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaidMediaType": {
+        "enum": [
+          "Preview",
+          "Photo",
+          "Video"
+        ],
+        "type": "string"
+      },
+      "PassportData": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EncryptedPassportElement"
+            },
+            "nullable": true
+          },
+          "credentials": {
+            "$ref": "#/components/schemas/EncryptedCredentials"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PassportFile": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "fileDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PhotoSize": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Poll": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "question": {
+            "type": "string",
+            "nullable": true
+          },
+          "questionEntities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageEntity"
+            },
+            "nullable": true
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PollOption"
+            },
+            "nullable": true
+          },
+          "totalVoterCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isClosed": {
+            "type": "boolean"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "allowsMultipleAnswers": {
+            "type": "boolean"
+          },
+          "correctOptionId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "explanation": {
+            "type": "string",
+            "nullable": true
+          },
+          "explanationEntities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageEntity"
+            },
+            "nullable": true
+          },
+          "openPeriod": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "closeDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PollAnswer": {
+        "type": "object",
+        "properties": {
+          "pollId": {
+            "type": "string",
+            "nullable": true
+          },
+          "voterChat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "optionIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PollOption": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "textEntities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageEntity"
+            },
+            "nullable": true
+          },
+          "voterCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PreCheckoutQuery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalAmount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "invoicePayload": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippingOptionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderInfo": {
+            "$ref": "#/components/schemas/OrderInfo"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProximityAlertTriggered": {
+        "type": "object",
+        "properties": {
+          "traveler": {
+            "$ref": "#/components/schemas/User"
+          },
+          "watcher": {
+            "$ref": "#/components/schemas/User"
+          },
+          "distance": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReactionCount": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ReactionType"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReactionType": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ReactionTypeKind"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReactionTypeKind": {
+        "enum": [
+          "Emoji",
+          "CustomEmoji",
+          "Paid"
+        ],
+        "type": "string"
+      },
+      "RecentErrorItem": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "errorType": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "command": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefreshTokenRequest": {
+        "required": [
+          "sessionToken"
+        ],
+        "type": "object",
+        "properties": {
+          "sessionToken": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefundedPayment": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalAmount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "invoicePayload": {
+            "type": "string",
+            "nullable": true
+          },
+          "telegramPaymentChargeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "providerPaymentChargeId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendMessageRequest": {
+        "required": [
+          "chatId",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "parseMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "disableWebPagePreview": {
+            "type": "boolean"
+          },
+          "disableNotification": {
+            "type": "boolean"
+          },
+          "replyToMessageId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetWebhookRequest": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "minLength": 1,
+            "type": "string",
+            "format": "uri"
+          },
+          "secretToken": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SharedUser": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "photo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhotoSize"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ShippingAddress": {
+        "type": "object",
+        "properties": {
+          "countryCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "streetLine1": {
+            "type": "string",
+            "nullable": true
+          },
+          "streetLine2": {
+            "type": "string",
+            "nullable": true
+          },
+          "postCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ShippingQuery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "from": {
+            "$ref": "#/components/schemas/User"
+          },
+          "invoicePayload": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/ShippingAddress"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StatisticsPeriod": {
+        "enum": [
+          "LastHour",
+          "Last24Hours",
+          "Last7Days",
+          "Last30Days",
+          "Last90Days",
+          "LastYear",
+          "Custom"
+        ],
+        "type": "string"
+      },
+      "Sticker": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/StickerType"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isAnimated": {
+            "type": "boolean"
+          },
+          "isVideo": {
+            "type": "boolean"
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/PhotoSize"
+          },
+          "emoji": {
+            "type": "string",
+            "nullable": true
+          },
+          "setName": {
+            "type": "string",
+            "nullable": true
+          },
+          "premiumAnimation": {
+            "$ref": "#/components/schemas/File"
+          },
+          "maskPosition": {
+            "$ref": "#/components/schemas/MaskPosition"
+          },
+          "customEmojiId": {
+            "type": "string",
+            "nullable": true
+          },
+          "needsRepainting": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StickerType": {
+        "enum": [
+          "Regular",
+          "Mask",
+          "CustomEmoji"
+        ],
+        "type": "string"
+      },
+      "Story": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/Chat"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SuccessfulPayment": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalAmount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "invoicePayload": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippingOptionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderInfo": {
+            "$ref": "#/components/schemas/OrderInfo"
+          },
+          "telegramPaymentChargeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "providerPaymentChargeId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SwitchInlineQueryChosenChat": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "nullable": true
+          },
+          "allowUserChats": {
+            "type": "boolean"
+          },
+          "allowBotChats": {
+            "type": "boolean"
+          },
+          "allowGroupChats": {
+            "type": "boolean"
+          },
+          "allowChannelChats": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TelegramWebAppAuthRequest": {
+        "required": [
+          "hash",
+          "initData"
+        ],
+        "type": "object",
+        "properties": {
+          "initData": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "hash": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TextQuote": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageEntity"
+            },
+            "nullable": true
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isManual": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TopCommandsResponse": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/StatisticsPeriod"
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommandUsageItem"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Update": {
+        "type": "object",
+        "properties": {
+          "update_id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "editedMessage": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "channelPost": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "editedChannelPost": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "businessConnection": {
+            "$ref": "#/components/schemas/BusinessConnection"
+          },
+          "businessMessage": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "editedBusinessMessage": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "deletedBusinessMessages": {
+            "$ref": "#/components/schemas/BusinessMessagesDeleted"
+          },
+          "messageReaction": {
+            "$ref": "#/components/schemas/MessageReactionUpdated"
+          },
+          "messageReactionCount": {
+            "$ref": "#/components/schemas/MessageReactionCountUpdated"
+          },
+          "inlineQuery": {
+            "$ref": "#/components/schemas/InlineQuery"
+          },
+          "chosenInlineResult": {
+            "$ref": "#/components/schemas/ChosenInlineResult"
+          },
+          "callbackQuery": {
+            "$ref": "#/components/schemas/CallbackQuery"
+          },
+          "shippingQuery": {
+            "$ref": "#/components/schemas/ShippingQuery"
+          },
+          "preCheckoutQuery": {
+            "$ref": "#/components/schemas/PreCheckoutQuery"
+          },
+          "purchasedPaidMedia": {
+            "$ref": "#/components/schemas/PaidMediaPurchased"
+          },
+          "poll": {
+            "$ref": "#/components/schemas/Poll"
+          },
+          "pollAnswer": {
+            "$ref": "#/components/schemas/PollAnswer"
+          },
+          "myChatMember": {
+            "$ref": "#/components/schemas/ChatMemberUpdated"
+          },
+          "chatMember": {
+            "$ref": "#/components/schemas/ChatMemberUpdated"
+          },
+          "chatJoinRequest": {
+            "$ref": "#/components/schemas/ChatJoinRequest"
+          },
+          "chatBoost": {
+            "$ref": "#/components/schemas/ChatBoostUpdated"
+          },
+          "removedChatBoost": {
+            "$ref": "#/components/schemas/ChatBoostRemoved"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateBlockStatusRequest": {
+        "required": [
+          "isBlocked"
+        ],
+        "type": "object",
+        "properties": {
+          "isBlocked": {
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "isBot": {
+            "type": "boolean"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "languageCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPremium": {
+            "type": "boolean"
+          },
+          "addedToAttachmentMenu": {
+            "type": "boolean"
+          },
+          "canJoinGroups": {
+            "type": "boolean"
+          },
+          "canReadAllGroupMessages": {
+            "type": "boolean"
+          },
+          "supportsInlineQueries": {
+            "type": "boolean"
+          },
+          "canConnectToBusiness": {
+            "type": "boolean"
+          },
+          "hasMainWebApp": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserActivityResponse": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/StatisticsPeriod"
+          },
+          "granularity": {
+            "$ref": "#/components/schemas/ActivityGranularity"
+          },
+          "activityData": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityDataPoint"
+            },
+            "nullable": true
+          },
+          "peakHour": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "peakDay": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "telegramId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "languageCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "isBot": {
+            "type": "boolean"
+          },
+          "isBlocked": {
+            "type": "boolean"
+          },
+          "blockReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "interactionCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastInteraction": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserResponsePaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserResponse"
+            },
+            "nullable": true
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UsersShared": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SharedUser"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Venue": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "foursquareId": {
+            "type": "string",
+            "nullable": true
+          },
+          "foursquareType": {
+            "type": "string",
+            "nullable": true
+          },
+          "googlePlaceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "googlePlaceType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Video": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/PhotoSize"
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "VideoChatEnded": {
+        "type": "object",
+        "properties": {
+          "duration": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "VideoChatParticipantsInvited": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "VideoChatScheduled": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "VideoChatStarted": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "VideoNote": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "length": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/PhotoSize"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Voice": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileUniqueId": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "WebAppData": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "nullable": true
+          },
+          "buttonText": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "WebAppInfo": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "WriteAccessAllowed": {
+        "type": "object",
+        "properties": {
+          "fromRequest": {
+            "type": "boolean"
+          },
+          "webAppName": {
+            "type": "string",
+            "nullable": true
+          },
+          "fromAttachmentMenu": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "apiKey",
+        "description": "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
+        "name": "Authorization",
+        "in": "header"
+      }
+    }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    }
+  ]
+}
