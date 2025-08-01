@@ -201,132 +201,15 @@ jobs:
       
     - name: Setup containerd and nerdctl
       run: |
-        set -e
+        # Make scripts executable and run enhanced containerd setup
+        chmod +x .github/scripts/setup-containerd.sh
+        chmod +x .github/scripts/validate-containerd.sh
         
-        # Remove conflicting packages that come pre-installed on GitHub Actions runners
-        echo "=== Removing conflicting packages ==="
-        sudo apt-get remove -y runc containerd docker.io docker-doc docker-compose podman-docker || true
-        sudo apt-get autoremove -y
+        # Run the enhanced setup
+        NERDCTL_VERSION="${{ env.NERDCTL_VERSION }}" INSTALL_BUILDKIT=true ./.github/scripts/setup-containerd.sh
         
-        # Add Docker's official GPG key and repository for containerd.io
-        echo "=== Setting up Docker repository ==="
-        sudo apt-get update
-        sudo apt-get install -y ca-certificates curl gnupg lsb-release
-        sudo mkdir -p /etc/apt/keyrings
-        
-        # Add Docker GPG key with retry logic
-        for i in {1..3}; do
-          if curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg; then
-            echo "✅ Docker GPG key added successfully"
-            break
-          else
-            echo "⚠️  Attempt $i failed to add Docker GPG key, retrying..."
-            sleep 5
-            if [ $i -eq 3 ]; then
-              echo "❌ Failed to add Docker GPG key after 3 attempts"
-              exit 1
-            fi
-          fi
-        done
-        
-        sudo chmod a+r /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        
-        # Install containerd.io (includes compatible runc)
-        echo "=== Installing containerd.io ==="
-        sudo apt-get update
-        
-        # Install containerd.io with retry logic
-        for i in {1..3}; do
-          if sudo apt-get install -y containerd.io; then
-            echo "✅ containerd.io installed successfully"
-            break
-          else
-            echo "⚠️  Attempt $i failed to install containerd.io, retrying..."
-            sudo apt-get clean
-            sudo apt-get update
-            sleep 5
-            if [ $i -eq 3 ]; then
-              echo "❌ Failed to install containerd.io after 3 attempts"
-              echo "=== Package information ==="
-              apt-cache policy containerd.io || true
-              echo "=== Held packages ==="
-              apt-mark showhold || true
-              exit 1
-            fi
-          fi
-        done
-        
-        # Configure containerd
-        echo "=== Configuring containerd ==="
-        sudo mkdir -p /etc/containerd
-        sudo containerd config default | sudo tee /etc/containerd/config.toml
-        
-        # Start containerd service
-        echo "=== Starting containerd service ==="
-        sudo systemctl daemon-reload
-        sudo systemctl start containerd
-        sudo systemctl enable containerd
-        
-        # Wait for containerd socket to be ready
-        echo "=== Waiting for containerd socket ==="
-        sudo timeout 30 bash -c 'until [ -S /run/containerd/containerd.sock ]; do sleep 1; done'
-        
-        # Download and install nerdctl
-        echo "=== Installing nerdctl ==="
-        curl -sSL "https://github.com/containerd/nerdctl/releases/download/v${{ env.NERDCTL_VERSION }}/nerdctl-${{ env.NERDCTL_VERSION }}-linux-amd64.tar.gz" -o nerdctl.tar.gz
-        sudo tar -xzf nerdctl.tar.gz -C /usr/local/bin/
-        sudo chmod +x /usr/local/bin/nerdctl
-        rm nerdctl.tar.gz
-        
-        # Download and install buildkit (includes buildctl)
-        echo "=== Installing buildkit ==="
-        curl -sSL "https://github.com/moby/buildkit/releases/download/v0.12.5/buildkit-v0.12.5.linux-amd64.tar.gz" -o buildkit.tar.gz
-        sudo tar -xzf buildkit.tar.gz -C /usr/local/
-        sudo chmod +x /usr/local/bin/buildctl /usr/local/bin/buildkitd
-        rm buildkit.tar.gz
-        
-        # Start buildkitd daemon in background for advanced build features
-        echo "=== Starting buildkitd daemon ==="
-        sudo mkdir -p /run/buildkit
-        sudo nohup /usr/local/bin/buildkitd \
-          --addr unix:///run/buildkit/buildkitd.sock \
-          --group $(id -gn) \
-          --containerd-worker \
-          --containerd-worker-addr /run/containerd/containerd.sock \
-          > /var/log/buildkitd.log 2>&1 &
-        
-        # Wait for buildkit socket to be ready
-        echo "=== Waiting for buildkit socket ==="
-        sudo timeout 30 bash -c 'until [ -S /run/buildkit/buildkitd.sock ]; do sleep 1; done'
-        sudo chmod 666 /run/buildkit/buildkitd.sock
-        
-        # Verify installations
-        echo "=== Containerd Status ==="
-        sudo systemctl status containerd --no-pager || true
-        containerd --version
-        sudo systemctl is-active --quiet containerd || { echo "ERROR: containerd is not running"; exit 1; }
-        
-        echo "=== Buildkit Status ==="
-        export BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
-        buildctl debug info || echo "buildctl not ready yet, continuing..."
-        
-        echo "=== Nerdctl Status ==="
-        # Use system-wide containerd socket (not rootless)
-        sudo nerdctl version
-        sudo nerdctl info
-        
-        # Verify that nerdctl can communicate with containerd properly
-        echo "=== Testing nerdctl functionality ==="
-        sudo nerdctl system info >/dev/null || { echo "ERROR: nerdctl cannot communicate with containerd"; exit 1; }
-        
-        # Test basic image operations
-        echo "=== Testing basic image operations ==="
-        sudo nerdctl pull hello-world:latest || { echo "ERROR: Cannot pull images with nerdctl"; exit 1; }
-        sudo nerdctl images hello-world || true
-        sudo nerdctl rmi hello-world:latest || true
-        
-        echo "=== Setup Complete and Verified ==="
+        # Validate the setup
+        INSTALL_BUILDKIT=true ./.github/scripts/validate-containerd.sh
       
     - name: Log in to GitHub Container Registry
       run: |
@@ -439,90 +322,20 @@ jobs:
     if: always() && needs.build-and-push.result == 'success'
     
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
     - name: Setup containerd and nerdctl
       run: |
-        set -e
+        # Make scripts executable and run enhanced containerd setup
+        chmod +x .github/scripts/setup-containerd.sh
+        chmod +x .github/scripts/validate-containerd.sh
         
-        # Remove conflicting packages that come pre-installed on GitHub Actions runners
-        echo "=== Removing conflicting packages ==="
-        sudo apt-get remove -y runc containerd docker.io docker-doc docker-compose podman-docker || true
-        sudo apt-get autoremove -y
+        # Run the enhanced setup
+        NERDCTL_VERSION="${{ env.NERDCTL_VERSION }}" ./.github/scripts/setup-containerd.sh
         
-        # Add Docker's official GPG key and repository for containerd.io
-        echo "=== Setting up Docker repository ==="
-        sudo apt-get update
-        sudo apt-get install -y ca-certificates curl gnupg lsb-release
-        sudo mkdir -p /etc/apt/keyrings
-        
-        # Add Docker GPG key with retry logic
-        for i in {1..3}; do
-          if curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg; then
-            echo "✅ Docker GPG key added successfully"
-            break
-          else
-            echo "⚠️  Attempt $i failed to add Docker GPG key, retrying..."
-            sleep 5
-            if [ $i -eq 3 ]; then
-              echo "❌ Failed to add Docker GPG key after 3 attempts"
-              exit 1
-            fi
-          fi
-        done
-        
-        sudo chmod a+r /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        
-        # Install containerd.io (includes compatible runc)
-        echo "=== Installing containerd.io ==="
-        sudo apt-get update
-        
-        # Install containerd.io with retry logic
-        for i in {1..3}; do
-          if sudo apt-get install -y containerd.io; then
-            echo "✅ containerd.io installed successfully"
-            break
-          else
-            echo "⚠️  Attempt $i failed to install containerd.io, retrying..."
-            sudo apt-get clean
-            sudo apt-get update
-            sleep 5
-            if [ $i -eq 3 ]; then
-              echo "❌ Failed to install containerd.io after 3 attempts"
-              echo "=== Package information ==="
-              apt-cache policy containerd.io || true
-              echo "=== Held packages ==="
-              apt-mark showhold || true
-              exit 1
-            fi
-          fi
-        done
-        
-        # Configure containerd
-        echo "=== Configuring containerd ==="
-        sudo mkdir -p /etc/containerd
-        sudo containerd config default | sudo tee /etc/containerd/config.toml
-        
-        # Start containerd service
-        echo "=== Starting containerd service ==="
-        sudo systemctl daemon-reload
-        sudo systemctl start containerd
-        sudo systemctl enable containerd
-        
-        # Wait for containerd socket to be ready
-        echo "=== Waiting for containerd socket ==="
-        sudo timeout 30 bash -c 'until [ -S /run/containerd/containerd.sock ]; do sleep 1; done'
-        
-        # Download and install nerdctl
-        echo "=== Installing nerdctl ==="
-        curl -sSL "https://github.com/containerd/nerdctl/releases/download/v${{ env.NERDCTL_VERSION }}/nerdctl-${{ env.NERDCTL_VERSION }}-linux-amd64.tar.gz" -o nerdctl.tar.gz
-        sudo tar -xzf nerdctl.tar.gz -C /usr/local/bin/
-        sudo chmod +x /usr/local/bin/nerdctl
-        rm nerdctl.tar.gz
-        
-        # Verify installation
-        echo "=== Verifying installation ==="
-        sudo nerdctl version
-        sudo nerdctl info
+        # Validate the setup
+        ./.github/scripts/validate-containerd.sh
     
     - name: Log in to GitHub Container Registry
       run: |
@@ -733,90 +546,20 @@ jobs:
       name: production
       
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
     - name: Setup containerd and nerdctl
       run: |
-        set -e
+        # Make scripts executable and run enhanced containerd setup
+        chmod +x .github/scripts/setup-containerd.sh
+        chmod +x .github/scripts/validate-containerd.sh
         
-        # Remove conflicting packages that come pre-installed on GitHub Actions runners
-        echo "=== Removing conflicting packages ==="
-        sudo apt-get remove -y runc containerd docker.io docker-doc docker-compose podman-docker || true
-        sudo apt-get autoremove -y
+        # Run the enhanced setup
+        NERDCTL_VERSION="${{ env.NERDCTL_VERSION }}" ./.github/scripts/setup-containerd.sh
         
-        # Add Docker's official GPG key and repository for containerd.io
-        echo "=== Setting up Docker repository ==="
-        sudo apt-get update
-        sudo apt-get install -y ca-certificates curl gnupg lsb-release
-        sudo mkdir -p /etc/apt/keyrings
-        
-        # Add Docker GPG key with retry logic
-        for i in {1..3}; do
-          if curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg; then
-            echo "✅ Docker GPG key added successfully"
-            break
-          else
-            echo "⚠️  Attempt $i failed to add Docker GPG key, retrying..."
-            sleep 5
-            if [ $i -eq 3 ]; then
-              echo "❌ Failed to add Docker GPG key after 3 attempts"
-              exit 1
-            fi
-          fi
-        done
-        
-        sudo chmod a+r /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        
-        # Install containerd.io (includes compatible runc)
-        echo "=== Installing containerd.io ==="
-        sudo apt-get update
-        
-        # Install containerd.io with retry logic
-        for i in {1..3}; do
-          if sudo apt-get install -y containerd.io; then
-            echo "✅ containerd.io installed successfully"
-            break
-          else
-            echo "⚠️  Attempt $i failed to install containerd.io, retrying..."
-            sudo apt-get clean
-            sudo apt-get update
-            sleep 5
-            if [ $i -eq 3 ]; then
-              echo "❌ Failed to install containerd.io after 3 attempts"
-              echo "=== Package information ==="
-              apt-cache policy containerd.io || true
-              echo "=== Held packages ==="
-              apt-mark showhold || true
-              exit 1
-            fi
-          fi
-        done
-        
-        # Configure containerd
-        echo "=== Configuring containerd ==="
-        sudo mkdir -p /etc/containerd
-        sudo containerd config default | sudo tee /etc/containerd/config.toml
-        
-        # Start containerd service
-        echo "=== Starting containerd service ==="
-        sudo systemctl daemon-reload
-        sudo systemctl start containerd
-        sudo systemctl enable containerd
-        
-        # Wait for containerd socket to be ready
-        echo "=== Waiting for containerd socket ==="
-        sudo timeout 30 bash -c 'until [ -S /run/containerd/containerd.sock ]; do sleep 1; done'
-        
-        # Download and install nerdctl
-        echo "=== Installing nerdctl ==="
-        curl -sSL "https://github.com/containerd/nerdctl/releases/download/v${{ env.NERDCTL_VERSION }}/nerdctl-${{ env.NERDCTL_VERSION }}-linux-amd64.tar.gz" -o nerdctl.tar.gz
-        sudo tar -xzf nerdctl.tar.gz -C /usr/local/bin/
-        sudo chmod +x /usr/local/bin/nerdctl
-        rm nerdctl.tar.gz
-        
-        # Verify installation
-        echo "=== Verifying installation ==="
-        sudo nerdctl version
-        sudo nerdctl info
+        # Validate the setup
+        ./.github/scripts/validate-containerd.sh
     
     - name: Azure Login
       uses: azure/login@v2
