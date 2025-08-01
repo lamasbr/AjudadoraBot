@@ -44,9 +44,17 @@ builder.Services.AddDbContext<AjudadoraBotDbContext>(options =>
     }
     
     // For Azure App Service, ensure we use the correct writable directory
-    if (connectionString?.Contains("/app/data/") == true && Directory.Exists("/home/data"))
+    // Azure App Service containers have limited writable directories
+    if (connectionString?.Contains("/home/data/") == true && !Directory.Exists("/home/data"))
     {
-        connectionString = connectionString.Replace("/app/data/", "/home/data/");
+        // Fallback to /tmp which is always writable in Azure App Service
+        connectionString = connectionString.Replace("/home/data/", "/tmp/");
+        builder.Services.AddLogging().Configure<LoggerFilterOptions>(options =>
+        {
+            options.AddFilter("Program", LogLevel.Information);
+        });
+        var logger = builder.Services.BuildServiceProvider().GetService<ILogger<Program>>();
+        logger?.LogWarning("Database path changed from /home/data/ to /tmp/ for Azure App Service compatibility");
     }
 
     options.UseSqlite(connectionString);
@@ -131,7 +139,20 @@ if (miniAppOptions?.AllowedOrigins.Any() == true)
 
 // Health checks with enhanced error reporting
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AjudadoraBotDbContext>(name: "AjudadoraBotDbContext", tags: new[] { "database", "sqlite" })
+    .AddDbContextCheck<AjudadoraBotDbContext>(name: "AjudadoraBotDbContext", 
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
+        tags: new[] { "database", "sqlite" },
+        customTestQuery: async (context, cancellationToken) =>
+        {
+            try
+            {
+                return await context.Database.CanConnectAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Database connection failed: {ex.Message}", ex);
+            }
+        })
     .AddCheck("database_write", () =>
     {
         try
@@ -267,7 +288,11 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "api-docs"; // Move to /api-docs to avoid conflict with frontend
 });
 
-app.UseHttpsRedirection();
+// Azure App Service handles HTTPS termination, so only redirect in non-Azure environments
+if (!builder.Environment.IsProduction() || !Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")?.StartsWith("azure") == true)
+{
+    app.UseHttpsRedirection();
+}
 
 // Rate limiting
 app.UseRateLimiter();
@@ -306,7 +331,7 @@ using (var scope = app.Services.CreateScope())
         var connectionString = app.Configuration.GetConnectionString("DefaultConnection");
         logger.LogInformation("Initializing database with connection string: {ConnectionString}", connectionString);
         
-        // Ensure database directory exists
+        // Ensure database directory exists and is writable
         if (connectionString?.Contains("Data Source=") == true)
         {
             var match = System.Text.RegularExpressions.Regex.Match(connectionString, @"Data Source=([^;]+)");
@@ -314,10 +339,39 @@ using (var scope = app.Services.CreateScope())
             {
                 var dbPath = match.Groups[1].Value;
                 var dbDirectory = Path.GetDirectoryName(dbPath);
-                if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+                
+                if (!string.IsNullOrEmpty(dbDirectory))
                 {
-                    logger.LogInformation("Creating database directory: {DatabaseDirectory}", dbDirectory);
-                    Directory.CreateDirectory(dbDirectory);
+                    if (!Directory.Exists(dbDirectory))
+                    {
+                        logger.LogInformation("Creating database directory: {DatabaseDirectory}", dbDirectory);
+                        try
+                        {
+                            Directory.CreateDirectory(dbDirectory);
+                            logger.LogInformation("Successfully created database directory: {DatabaseDirectory}", dbDirectory);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to create database directory: {DatabaseDirectory}. Error: {Error}", 
+                                dbDirectory, ex.Message);
+                            throw;
+                        }
+                    }
+                    
+                    // Test write permissions
+                    try
+                    {
+                        var testFile = Path.Combine(dbDirectory, "write_test.tmp");
+                        await File.WriteAllTextAsync(testFile, "test");
+                        File.Delete(testFile);
+                        logger.LogInformation("Database directory is writable: {DatabaseDirectory}", dbDirectory);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Database directory is not writable: {DatabaseDirectory}. Error: {Error}", 
+                            dbDirectory, ex.Message);
+                        throw new InvalidOperationException($"Database directory is not writable: {dbDirectory}", ex);
+                    }
                 }
             }
         }

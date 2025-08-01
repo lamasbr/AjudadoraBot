@@ -94,8 +94,10 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
     TZ=UTC
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/data /app/logs /app/wwwroot && \
-    chown -R appuser:appgroup /app
+# Azure App Service uses /tmp for writable storage
+RUN mkdir -p /app/data /app/logs /app/wwwroot /tmp && \
+    chown -R appuser:appgroup /app && \
+    chmod 755 /tmp
 
 WORKDIR /app
 
@@ -106,9 +108,11 @@ COPY --from=backend-build --chown=appuser:appgroup /app/publish ./
 COPY --from=frontend-build --chown=appuser:appgroup /frontend ./wwwroot/
 
 # Create SQLite database directory with proper permissions
+# Ensure /tmp is writable for Azure App Service
 RUN mkdir -p /app/data && \
     chown appuser:appgroup /app/data && \
-    chmod 750 /app/data
+    chmod 750 /app/data && \
+    chmod 777 /tmp
 
 # Switch to non-root user
 USER appuser
