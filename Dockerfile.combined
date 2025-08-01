@@ -54,20 +54,19 @@ RUN apk upgrade --no-cache && \
 
 WORKDIR /src
 
-# Copy solution and project files for optimized layer caching
-COPY *.sln ./
+# Copy only main project files for optimized layer caching (exclude test projects)
 COPY src/AjudadoraBot.Api/AjudadoraBot.Api.csproj src/AjudadoraBot.Api/
 COPY src/AjudadoraBot.Core/AjudadoraBot.Core.csproj src/AjudadoraBot.Core/
 COPY src/AjudadoraBot.Infrastructure/AjudadoraBot.Infrastructure.csproj src/AjudadoraBot.Infrastructure/
 
-# Restore dependencies with optimization for Azure App Service
-RUN dotnet restore --runtime linux-musl-x64 --no-cache --verbosity minimal
+# Restore dependencies for main projects only with optimization for Azure App Service
+RUN dotnet restore src/AjudadoraBot.Api/AjudadoraBot.Api.csproj --runtime linux-musl-x64 --no-cache --verbosity minimal
 
 # Copy source code
 COPY src/ src/
 
 # Build and publish with production optimizations for F1 tier
-RUN dotnet build -c Release --no-restore --runtime linux-musl-x64 --verbosity minimal && \
+RUN dotnet build src/AjudadoraBot.Api/AjudadoraBot.Api.csproj -c Release --no-restore --runtime linux-musl-x64 --verbosity minimal && \
     dotnet publish src/AjudadoraBot.Api/AjudadoraBot.Api.csproj \
     -c Release \
     -o /app/publish \
@@ -75,7 +74,7 @@ RUN dotnet build -c Release --no-restore --runtime linux-musl-x64 --verbosity mi
     --runtime linux-musl-x64 \
     --self-contained false \
     --verbosity minimal \
-    -p:PublishReadyToRun=true \
+    -p:PublishReadyToRun=false \
     -p:PublishSingleFile=false \
     -p:PublishTrimmed=false \
     -p:DebugType=None
@@ -133,9 +132,9 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
     DOTNET_ReadyToRun=1
 
 # Create necessary directories with proper permissions for F1 tier
-RUN mkdir -p /home/data /home/logs /home/tmp /app && \
+RUN mkdir -p /home/data /home/logs /home/tmp /app /app/data && \
     chown -R appuser:appgroup /home/data /home/logs /home/tmp /app && \
-    chmod 755 /home/data /home/logs /home/tmp
+    chmod 755 /home/data /home/logs /home/tmp /app/data
 
 WORKDIR /app
 
@@ -143,9 +142,9 @@ WORKDIR /app
 COPY --from=backend-build --chown=appuser:appgroup /app/publish ./
 
 # Ensure SQLite database directory exists with proper permissions
-RUN mkdir -p /home/data && \
-    chown appuser:appgroup /home/data && \
-    chmod 750 /home/data
+RUN mkdir -p /app/data && \
+    chown appuser:appgroup /app/data && \
+    chmod 750 /app/data
 
 # Switch to non-root user for security
 USER appuser
