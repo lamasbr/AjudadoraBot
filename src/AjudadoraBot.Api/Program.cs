@@ -85,12 +85,17 @@ builder.Services.AddAuthorization();
 // Rate Limiting
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("ApiPolicy", limiterOptions =>
+    options.AddPolicy("ApiPolicy", context =>
     {
-        limiterOptions.PermitLimit = builder.Configuration.GetValue<int>("RateLimiting:PermitLimit", 100);
-        limiterOptions.Window = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("RateLimiting:WindowMinutes", 1));
-        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = builder.Configuration.GetValue<int>("RateLimiting:QueueLimit", 10);
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.Id ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue<int>("RateLimiting:PermitLimit", 100),
+                Window = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("RateLimiting:WindowMinutes", 1)),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = builder.Configuration.GetValue<int>("RateLimiting:QueueLimit", 10)
+            });
     });
 });
 

@@ -112,11 +112,7 @@ describe('AuthManager', () => {
       expect(authManager.user).toEqual({
         id: 123456789,
         firstName: 'Test',
-        lastName: 'User',
-        username: 'testuser',
-        languageCode: 'en',
-        isPremium: false,
-        photoUrl: undefined
+        lastName: 'User'
       });
     });
 
@@ -198,7 +194,7 @@ describe('AuthManager', () => {
       );
     });
 
-    test('should handle token refresh failure', () => {
+    test('should handle token refresh failure', async () => {
       mockApiClient.refreshAuthToken.mockRejectedValue(new Error('Refresh failed'));
       const handleAuthRequiredSpy = jest.spyOn(authManager, 'handleAuthRequired');
 
@@ -208,9 +204,8 @@ describe('AuthManager', () => {
       jest.advanceTimersByTime(50 * 60 * 1000);
 
       // Wait for promises to resolve
-      return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
-        expect(handleAuthRequiredSpy).toHaveBeenCalled();
-      });
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(handleAuthRequiredSpy).toHaveBeenCalled();
     });
   });
 

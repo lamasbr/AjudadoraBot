@@ -79,7 +79,9 @@ describe('ApiClient', () => {
   describe('request', () => {
     test('should make successful GET request', async () => {
       const mockData = { message: 'success' };
-      fetchMock.mockResponseOnce(JSON.stringify(mockData));
+      fetchMock.mockResponseOnce(JSON.stringify(mockData), {
+        headers: { 'Content-Type': 'application/json' }
+      });
 
       const result = await apiClient.request('/test');
 
@@ -131,7 +133,10 @@ describe('ApiClient', () => {
     test('should throw ApiError on HTTP error', async () => {
       fetchMock.mockResponseOnce(
         JSON.stringify({ message: 'Bad Request' }),
-        { status: 400 }
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
 
       await expect(apiClient.request('/test')).rejects.toThrow(ApiError);
