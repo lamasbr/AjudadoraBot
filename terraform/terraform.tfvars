@@ -33,8 +33,8 @@ allowed_origins = [
 # Cost Optimization Settings
 create_storage_account = false
 
-# Monitoring and Alerting
-enable_cost_alerts = true
+# Monitoring and Alerting - DISABLED: Using Datadog only
+enable_cost_alerts = false
 alert_email       = "admin@example.com"
 
 # Additional App Settings
