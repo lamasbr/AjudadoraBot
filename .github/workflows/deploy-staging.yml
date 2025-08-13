@@ -257,7 +257,26 @@ jobs:
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-        
+
+    - name: Bootstrap Remote Backend (ensure state storage exists)
+      working-directory: ./terraform/bootstrap
+      env:
+        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
+      run: |
+        terraform init -upgrade
+        terraform apply -auto-approve -var "environment=staging"
+
+    - name: Get Backend Values
+      id: backend
+      working-directory: ./terraform/bootstrap
+      run: |
+        echo "rg=$(terraform output -raw state_resource_group)" >> $GITHUB_OUTPUT
+        echo "sa=$(terraform output -raw state_storage_account)" >> $GITHUB_OUTPUT
+        echo "ct=$(terraform output -raw state_container)" >> $GITHUB_OUTPUT
+
     - name: Terraform Init
       working-directory: ./terraform
       env:
@@ -265,7 +284,12 @@ jobs:
         ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
         ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
         ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
-      run: terraform init
+      run: |
+        terraform init \
+          -backend-config="resource_group_name=${{ steps.backend.outputs.rg }}" \
+          -backend-config="storage_account_name=${{ steps.backend.outputs.sa }}" \
+          -backend-config="container_name=${{ steps.backend.outputs.ct }}" \
+          -backend-config="key=ajudadorabot-staging.tfstate"
         
     - name: Terraform Plan (staging)
       working-directory: ./terraform

@@ -19,6 +19,18 @@ on:
         options:
           - production
           - staging
+      state_rg:
+        description: 'State Resource Group (optional)'
+        required: false
+        type: string
+      state_sa:
+        description: 'State Storage Account (optional)'
+        required: false
+        type: string
+      state_container:
+        description: 'State Container (optional, default tfstate)'
+        required: false
+        type: string
       auto_approve:
         description: 'Auto approve apply'
         required: false
@@ -29,7 +41,6 @@ on:
 
 permissions:
   contents: read
-  # id-token removed to revert OIDC
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -40,7 +51,7 @@ jobs:
     name: Terraform ${{ inputs.action || 'plan' }} (${{ inputs.environment || 'production' }})
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
     - name: Checkout repository
@@ -56,14 +67,50 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Terraform Init
+    - name: Bootstrap Remote Backend (ensure state storage exists)
+      working-directory: ./terraform/bootstrap
+      env:
+        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
+      run: |
+        terraform init -upgrade
+        terraform apply -auto-approve -var "environment=${{ inputs.environment || 'production' }}"
+
+    - name: Get Backend Values
+      id: backend
+      working-directory: ./terraform/bootstrap
+      run: |
+        echo "rg=$(terraform output -raw state_resource_group)" >> $GITHUB_OUTPUT
+        echo "sa=$(terraform output -raw state_storage_account)" >> $GITHUB_OUTPUT
+        echo "ct=$(terraform output -raw state_container)" >> $GITHUB_OUTPUT
+
+    - name: Terraform Init (remote backend)
       working-directory: ./terraform
       env:
         ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
         ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
         ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
         ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
-      run: terraform init -upgrade
+      run: |
+        RG="${{ inputs.state_rg }}"; SA="${{ inputs.state_sa }}"; CT="${{ inputs.state_container }}"
+        [ -z "$RG" ] && RG="${{ steps.backend.outputs.rg }}"
+        [ -z "$SA" ] && SA="${{ steps.backend.outputs.sa }}"
+        [ -z "$CT" ] && CT="${{ steps.backend.outputs.ct }}"
+        [ -z "$CT" ] && CT="tfstate"
+        KEY="ajudadorabot-${{ inputs.environment || 'production' }}.tfstate"
+        if [ -n "$RG" ] && [ -n "$SA" ]; then
+          echo "Using remote backend: RG=$RG SA=$SA CT=$CT KEY=$KEY"
+          terraform init -upgrade \
+            -backend-config="resource_group_name=$RG" \
+            -backend-config="storage_account_name=$SA" \
+            -backend-config="container_name=$CT" \
+            -backend-config="key=$KEY"
+        else
+          echo "Remote backend not available. Falling back to local state."
+          terraform init -upgrade
+        fi
 
     - name: Terraform Validate
       working-directory: ./terraform

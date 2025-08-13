@@ -14,14 +14,7 @@ terraform {
     }
   }
 
-  # Remote state backend (recomendado). Não é possível parametrizar via variáveis aqui.
-  # Descomente e preencha para usar Azure Storage como backend remoto:
-  # backend "azurerm" {
-  #   resource_group_name  = "terraform-state-rg"
-  #   storage_account_name = "terraformstatexxxxxx"  # único globalmente
-  #   container_name       = "tfstate"
-  #   key                  = "ajudadorabot-${var.environment}.tfstate" # NÃO SUPORTA variáveis - ajuste manualmente
-  # }
+  backend "azurerm" {}
 
   # Alternativa Terraform Cloud:
   # cloud {
