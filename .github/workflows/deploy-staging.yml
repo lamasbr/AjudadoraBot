@@ -17,7 +17,6 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 concurrency:
   group: ci-staging-${{ github.workflow }}-${{ github.ref }}
@@ -240,7 +239,9 @@ jobs:
     if: |
       (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/rc')) &&
       github.event_name != 'pull_request'
-    environment: staging
+    environment:
+      name: staging
+      url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
     timeout-minutes: 30
     
     steps:
@@ -252,30 +253,27 @@ jobs:
       with:
         terraform_version: 1.12.2
         
-    - name: Azure Login (OIDC)
+    - name: Azure Login (Service Principal)
       uses: azure/login@v2
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        allow-no-subscriptions: false
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: Terraform Init
       working-directory: ./terraform
       env:
-        ARM_USE_OIDC: true
-        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
       run: terraform init
         
     - name: Terraform Plan (staging)
       working-directory: ./terraform
       env:
-        ARM_USE_OIDC: true
-        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
         TF_VAR_environment: staging
         TF_VAR_telegram_bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
@@ -286,10 +284,10 @@ jobs:
     - name: Terraform Apply (staging)
       working-directory: ./terraform
       env:
-        ARM_USE_OIDC: true
-        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
+        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
+        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
+        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
       run: terraform apply -auto-approve tfplan
         
     - name: Get Terraform Outputs
