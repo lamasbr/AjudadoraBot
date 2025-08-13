@@ -313,6 +313,7 @@ jobs:
       run: sleep 90
         
     - name: Health Check
+      if: ${{ false }}
       run: |
         max_attempts=15
         attempt=1

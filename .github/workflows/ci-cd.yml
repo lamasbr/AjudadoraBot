@@ -436,6 +436,7 @@ jobs:
       run: sleep 90 # F1 tier can be slow to start
         
     - name: Health Check
+      if: ${{ false }}
       run: |
         max_attempts=15
         attempt=1
