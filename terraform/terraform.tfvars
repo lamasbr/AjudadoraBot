@@ -9,8 +9,8 @@ app_version = "1.0.0"
 
 # GitHub Container Registry (Free) - placeholder values
 container_registry = "ghcr.io"
-ghcr_username     = "testuser"
-ghcr_token        = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+ghcr_username      = "testuser"
+ghcr_token         = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # Telegram Bot Configuration - placeholder (proper format)
 telegram_bot_token = "1234567890:AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZaabbccddee"
@@ -25,7 +25,7 @@ datadog_site    = "datadoghq.com"
 # CORS Configuration for Telegram Mini App
 allowed_origins = [
   "https://web.telegram.org",
-  "https://k.web.telegram.org", 
+  "https://k.web.telegram.org",
   "https://z.web.telegram.org",
   "https://a.web.telegram.org"
 ]
@@ -35,7 +35,7 @@ create_storage_account = false
 
 # Monitoring and Alerting - DISABLED: Using Datadog only
 enable_cost_alerts = false
-alert_email       = "admin@example.com"
+alert_email        = "admin@example.com"
 
 # Additional App Settings
 additional_app_settings = {}
