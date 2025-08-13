@@ -94,22 +94,31 @@ jobs:
         ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
         ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
       run: |
+        set -e
         RG="${{ inputs.state_rg }}"; SA="${{ inputs.state_sa }}"; CT="${{ inputs.state_container }}"
         [ -z "$RG" ] && RG="${{ steps.backend.outputs.rg }}"
         [ -z "$SA" ] && SA="${{ steps.backend.outputs.sa }}"
         [ -z "$CT" ] && CT="${{ steps.backend.outputs.ct }}"
         [ -z "$CT" ] && CT="tfstate"
         KEY="ajudadorabot-${{ inputs.environment || 'production' }}.tfstate"
-        if [ -n "$RG" ] && [ -n "$SA" ]; then
-          echo "Using remote backend: RG=$RG SA=$SA CT=$CT KEY=$KEY"
-          terraform init -upgrade \
-            -backend-config="resource_group_name=$RG" \
-            -backend-config="storage_account_name=$SA" \
-            -backend-config="container_name=$CT" \
-            -backend-config="key=$KEY"
+        CONFIGS=(
+          -backend-config="resource_group_name=$RG"
+          -backend-config="storage_account_name=$SA"
+          -backend-config="container_name=$CT"
+          -backend-config="key=$KEY"
+        )
+        echo "Initializing backend with Azure AD auth..."
+        if terraform init -upgrade "${CONFIGS[@]}" -backend-config="use_azuread_auth=true"; then
+          echo "Backend initialized with Azure AD auth."
         else
-          echo "Remote backend not available. Falling back to local state."
-          terraform init -upgrade
+          echo "Azure AD auth failed. Falling back to access key auth."
+          ACCESS_KEY=$(az storage account keys list --resource-group "$RG" --account-name "$SA" --query "[0].value" -o tsv)
+          if [ -z "$ACCESS_KEY" ]; then
+            echo "Failed to retrieve storage account access key" >&2
+            exit 1
+          fi
+          export ARM_ACCESS_KEY="$ACCESS_KEY"
+          terraform init -upgrade -reconfigure "${CONFIGS[@]}"
         fi
 
     - name: Terraform Validate

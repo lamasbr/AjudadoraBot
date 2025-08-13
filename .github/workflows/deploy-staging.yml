@@ -285,11 +285,30 @@ jobs:
         ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
         ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
       run: |
-        terraform init \
-          -backend-config="resource_group_name=${{ steps.backend.outputs.rg }}" \
-          -backend-config="storage_account_name=${{ steps.backend.outputs.sa }}" \
-          -backend-config="container_name=${{ steps.backend.outputs.ct }}" \
-          -backend-config="key=ajudadorabot-staging.tfstate"
+        set -e
+        RG="${{ steps.backend.outputs.rg }}"
+        SA="${{ steps.backend.outputs.sa }}"
+        CT="${{ steps.backend.outputs.ct }}"
+        KEY="ajudadorabot-staging.tfstate"
+        CONFIGS=(
+          -backend-config="resource_group_name=$RG"
+          -backend-config="storage_account_name=$SA"
+          -backend-config="container_name=$CT"
+          -backend-config="key=$KEY"
+        )
+        echo "Initializing backend with Azure AD auth..."
+        if terraform init "${CONFIGS[@]}" -backend-config="use_azuread_auth=true"; then
+          echo "Backend initialized with Azure AD auth."
+        else
+          echo "Azure AD auth failed. Falling back to access key auth."
+          ACCESS_KEY=$(az storage account keys list --resource-group "$RG" --account-name "$SA" --query "[0].value" -o tsv)
+          if [ -z "$ACCESS_KEY" ]; then
+            echo "Failed to retrieve storage account access key" >&2
+            exit 1
+          fi
+          export ARM_ACCESS_KEY="$ACCESS_KEY"
+          terraform init -reconfigure "${CONFIGS[@]}"
+        fi
         
     - name: Terraform Plan (staging)
       working-directory: ./terraform
