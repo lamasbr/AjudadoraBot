@@ -267,16 +267,16 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
       run: |
         set -e
-        RG="${{ vars.AZURE_RESOURCE_GROUP_NAME }}"
-        SA="${{ vars.AZURE_STORAGE_ACCOUNT_NAME }}"
+        RG="${{ vars.AZURE_TF_STORAGE_ACCOUNT_NAME }}"
+        SA="${{ vars.AZURE_TF_STORAGE_ACCOUNT_NAME }}"
         CT="${{ vars.AZURE_TF_CONTAINER_NAME }}"
         KEY="${{ vars.AZURE_TF_TFSTATE_NAME }}"
         ACCESS_KEY="${{ secrets.AZURE_STORAGE_ACCOUNT_ACCESSKEY }}"
         
         if [ -z "$RG" ] || [ -z "$SA" ] || [ -z "$CT" ] || [ -z "$KEY" ] || [ -z "$ACCESS_KEY" ]; then
           echo "ERROR: Missing required variables or secrets:"
-          echo "  AZURE_RESOURCE_GROUP_NAME: ${RG:-NOT_SET}"
-          echo "  AZURE_STORAGE_ACCOUNT_NAME: ${SA:-NOT_SET}"
+          echo "  AZURE_TF_STORAGE_ACCOUNT_NAME: ${RG:-NOT_SET}"
+          echo "  AZURE_TF_STORAGE_ACCOUNT_NAME: ${SA:-NOT_SET}"
           echo "  AZURE_TF_CONTAINER_NAME: ${CT:-NOT_SET}"
           echo "  AZURE_TF_TFSTATE_NAME: ${KEY:-NOT_SET}"
           echo "  AZURE_STORAGE_ACCOUNT_ACCESSKEY: ${ACCESS_KEY:+SET}"
