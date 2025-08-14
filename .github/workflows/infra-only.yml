@@ -67,25 +67,6 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Bootstrap Remote Backend (ensure state storage exists)
-      working-directory: ./terraform/bootstrap
-      env:
-        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
-        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
-        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
-        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
-      run: |
-        terraform init -upgrade
-        terraform apply -auto-approve -var "environment=${{ inputs.environment || 'production' }}"
-
-    - name: Get Backend Values
-      id: backend
-      working-directory: ./terraform/bootstrap
-      run: |
-        echo "rg=$(terraform output -raw state_resource_group)" >> $GITHUB_OUTPUT
-        echo "sa=$(terraform output -raw state_storage_account)" >> $GITHUB_OUTPUT
-        echo "ct=$(terraform output -raw state_container)" >> $GITHUB_OUTPUT
-
     - name: Terraform Init (remote backend)
       working-directory: ./terraform
       env:
@@ -95,31 +76,32 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
       run: |
         set -e
-        RG="${{ inputs.state_rg }}"; SA="${{ inputs.state_sa }}"; CT="${{ inputs.state_container }}"
-        [ -z "$RG" ] && RG="${{ steps.backend.outputs.rg }}"
-        [ -z "$SA" ] && SA="${{ steps.backend.outputs.sa }}"
-        [ -z "$CT" ] && CT="${{ steps.backend.outputs.ct }}"
-        [ -z "$CT" ] && CT="tfstate"
-        KEY="ajudadorabot-${{ inputs.environment || 'production' }}.tfstate"
-        CONFIGS=(
-          -backend-config="resource_group_name=$RG"
-          -backend-config="storage_account_name=$SA"
-          -backend-config="container_name=$CT"
-          -backend-config="key=$KEY"
-        )
-        echo "Initializing backend with Azure AD auth..."
-        if terraform init -upgrade "${CONFIGS[@]}" -backend-config="use_azuread_auth=true"; then
-          echo "Backend initialized with Azure AD auth."
-        else
-          echo "Azure AD auth failed. Falling back to access key auth."
-          ACCESS_KEY=$(az storage account keys list --resource-group "$RG" --account-name "$SA" --query "[0].value" -o tsv)
-          if [ -z "$ACCESS_KEY" ]; then
-            echo "Failed to retrieve storage account access key" >&2
-            exit 1
-          fi
-          export ARM_ACCESS_KEY="$ACCESS_KEY"
-          terraform init -upgrade -reconfigure "${CONFIGS[@]}"
+        # Use inputs if provided, otherwise use repository variables
+        RG="${{ inputs.state_rg || vars.AZURE_RESOURCE_GROUP_NAME }}"
+        SA="${{ inputs.state_sa || vars.AZURE_STORAGE_ACCOUNT_NAME }}"
+        CT="${{ inputs.state_container || vars.AZURE_TF_CONTAINER_NAME }}"
+        KEY="${{ vars.AZURE_TF_TFSTATE_NAME }}"
+        ACCESS_KEY="${{ secrets.AZURE_STORAGE_ACCOUNT_ACCESSKEY }}"
+        
+        if [ -z "$RG" ] || [ -z "$SA" ] || [ -z "$CT" ] || [ -z "$KEY" ] || [ -z "$ACCESS_KEY" ]; then
+          echo "ERROR: Missing required variables or secrets:"
+          echo "  AZURE_RESOURCE_GROUP_NAME: ${RG:-NOT_SET}"
+          echo "  AZURE_STORAGE_ACCOUNT_NAME: ${SA:-NOT_SET}"
+          echo "  AZURE_TF_CONTAINER_NAME: ${CT:-NOT_SET}"
+          echo "  AZURE_TF_TFSTATE_NAME: ${KEY:-NOT_SET}"
+          echo "  AZURE_STORAGE_ACCOUNT_ACCESSKEY: ${ACCESS_KEY:+SET}"
+          echo "Falling back to local state."
+          terraform init -upgrade
+          exit 0
         fi
+        
+        echo "Initializing Terraform backend with access key auth..."
+        terraform init -upgrade \
+          -backend-config="resource_group_name=$RG" \
+          -backend-config="storage_account_name=$SA" \
+          -backend-config="container_name=$CT" \
+          -backend-config="key=$KEY" \
+          -backend-config="access_key=$ACCESS_KEY"
 
     - name: Terraform Validate
       working-directory: ./terraform

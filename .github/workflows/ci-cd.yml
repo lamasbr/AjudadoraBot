@@ -359,7 +359,7 @@ jobs:
   deploy-production:
     name: Deploy to Azure (Free Tier)
     runs-on: ubuntu-latest
-    needs: [build-and-push]
+    needs: [build-and-push, infra-apply]
     if: |
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) &&
       github.event_name != 'pull_request'
@@ -367,123 +367,35 @@ jobs:
       name: production
       url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
     timeout-minutes: 30
-      
+
     steps:
-    - name: Checkout repository (for Terraform)
+    - name: Checkout repository
       uses: actions/checkout@v4
-      
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.12.2
-        
+
     - name: Azure Login (Service Principal)
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Bootstrap Remote Backend (ensure state storage exists)
-      working-directory: ./terraform/bootstrap
-      env:
-        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
-        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
-        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
-        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
-      run: |
-        terraform init -upgrade
-        terraform apply -auto-approve
-
-    - name: Get Backend Values
-      id: backend
-      working-directory: ./terraform/bootstrap
-      run: |
-        echo "rg=$(terraform output -raw state_resource_group)" >> $GITHUB_OUTPUT
-        echo "sa=$(terraform output -raw state_storage_account)" >> $GITHUB_OUTPUT
-        echo "ct=$(terraform output -raw state_container)" >> $GITHUB_OUTPUT
-
-    - name: Terraform Init
-      working-directory: ./terraform
-      env:
-        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
-        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
-        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
-        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
-      run: |
-        set -e
-        RG="${{ steps.backend.outputs.rg }}"
-        SA="${{ steps.backend.outputs.sa }}"
-        CT="${{ steps.backend.outputs.ct }}"
-        KEY="ajudadorabot-production.tfstate"
-        CONFIGS=(
-          -backend-config="resource_group_name=$RG"
-          -backend-config="storage_account_name=$SA"
-          -backend-config="container_name=$CT"
-          -backend-config="key=$KEY"
-        )
-        echo "Initializing backend with Azure AD auth..."
-        if terraform init "${CONFIGS[@]}" -backend-config="use_azuread_auth=true"; then
-          echo "Backend initialized with Azure AD auth."
-        else
-          echo "Azure AD auth failed. Falling back to access key auth."
-          ACCESS_KEY=$(az storage account keys list --resource-group "$RG" --account-name "$SA" --query "[0].value" -o tsv)
-          if [ -z "$ACCESS_KEY" ]; then
-            echo "Failed to retrieve storage account access key" >&2
-            exit 1
-          fi
-          export ARM_ACCESS_KEY="$ACCESS_KEY"
-          terraform init -reconfigure "${CONFIGS[@]}"
-        fi
-        
-    - name: Terraform Plan
-      working-directory: ./terraform
-      env:
-        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
-        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
-        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
-        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
-        TF_VAR_telegram_bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
-        TF_VAR_ghcr_username: ${{ github.actor }}
-        TF_VAR_ghcr_token: ${{ secrets.GITHUB_TOKEN }}
-      run: terraform plan -out=tfplan
-        
-    - name: Terraform Apply
-      working-directory: ./terraform
-      env:
-        ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }}
-        ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }}
-        ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).tenantId }}
-        ARM_SUBSCRIPTION_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS).subscriptionId }}
-      run: terraform apply -auto-approve tfplan
-        
-    - name: Get Terraform Outputs
-      id: terraform-outputs
-      working-directory: ./terraform
-      run: |
-        echo "app-service-name=$(terraform output -raw app_service_name)" >> $GITHUB_OUTPUT
-        echo "resource-group-name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
-        echo "app-service-url=$(terraform output -raw app_service_url)" >> $GITHUB_OUTPUT
-        echo "swagger-url=$(terraform output -raw swagger_url)" >> $GITHUB_OUTPUT
-        
     - name: Deploy Container to App Service
       run: |
         az webapp config container set \
-          --name ${{ steps.terraform-outputs.outputs.app-service-name }} \
-          --resource-group ${{ steps.terraform-outputs.outputs.resource-group-name }} \
+          --name "${{ needs.infra-apply.outputs.app_service_name }}" \
+          --resource-group "${{ needs.infra-apply.outputs.resource_group_name }}" \
           --docker-custom-image-name ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
           --docker-registry-server-url https://${{ env.REGISTRY }} \
           --docker-registry-server-user ${{ github.actor }} \
           --docker-registry-server-password ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: Wait for container startup
       run: sleep 90 # F1 tier can be slow to start
-        
+
     - name: Health Check
       if: ${{ false }}
       run: |
         max_attempts=15
         attempt=1
-        URL=${{ steps.terraform-outputs.outputs.app-service-url }}/health
+        URL=${{ needs.infra-apply.outputs.app_service_url }}/health
         while [ $attempt -le $max_attempts ]; do
           echo "Health check attempt $attempt/$max_attempts -> $URL"
           if curl -f -s --max-time 30 "$URL"; then
@@ -498,19 +410,19 @@ jobs:
           sleep 20
           attempt=$((attempt + 1))
         done
-        
+
     - name: Test API Endpoints
       run: |
-        curl -f ${{ steps.terraform-outputs.outputs.app-service-url }}/health
-        curl -f ${{ steps.terraform-outputs.outputs.swagger-url }} || echo "Swagger may not be enabled in production"
-        curl -f ${{ steps.terraform-outputs.outputs.app-service-url }}/ || echo "Frontend may not be available yet"
-        
+        curl -f ${{ needs.infra-apply.outputs.app_service_url }}/health
+        curl -f ${{ needs.infra-apply.outputs.swagger_url }} || echo "Swagger may not be enabled in production"
+        curl -f ${{ needs.infra-apply.outputs.app_service_url }}/ || echo "Frontend may not be available yet"
+
     - name: Configure Telegram Webhook
       run: |
-        WEBHOOK_URL="${{ steps.terraform-outputs.outputs.app-service-url }}/webhook"
+        WEBHOOK_URL="${{ needs.infra-apply.outputs.app_service_url }}/webhook"
         echo "Setting Telegram webhook to: $WEBHOOK_URL"
         # curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook" -d "url=$WEBHOOK_URL"
-        
+
     - name: Notify Datadog Deployment
       if: always()
       run: |
@@ -523,7 +435,7 @@ jobs:
           "tags": ["environment:production", "service:ajudadorabot", "deployment", "build-tool:docker", "runtime:docker"],
           "alert_type": "info"
         }' || echo "Failed to notify Datadog"
-        
+
     - name: Azure Logout
       if: always()
       run: az logout
