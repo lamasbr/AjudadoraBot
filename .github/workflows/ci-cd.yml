@@ -323,7 +323,7 @@ jobs:
         SA="${{ vars.AZURE_TF_STORAGE_ACCOUNT_NAME }}"
         CT="${{ vars.AZURE_TF_CONTAINER_NAME }}"
         KEY="${{ vars.AZURE_TF_TFSTATE_NAME }}"
-        ACCESS_KEY="${{ secrets.AZURE_STORAGE_ACCOUNT_ACCESSKEY }}"
+        ACCESS_KEY="${{ secrets.AZURE_TF_STORAGE_ACCOUNT_ACCESSKEY }}"
         
         if [ -z "$RG" ] || [ -z "$SA" ] || [ -z "$CT" ] || [ -z "$KEY" ] || [ -z "$ACCESS_KEY" ]; then
           echo "ERROR: Missing required variables or secrets:"
@@ -331,7 +331,7 @@ jobs:
           echo "  AZURE_TF_STORAGE_ACCOUNT_NAME: ${SA:-NOT_SET}"
           echo "  AZURE_TF_CONTAINER_NAME: ${CT:-NOT_SET}"
           echo "  AZURE_TF_TFSTATE_NAME: ${KEY:-NOT_SET}"
-          echo "  AZURE_STORAGE_ACCOUNT_ACCESSKEY: ${ACCESS_KEY:+SET}"
+          echo "  AZURE_TF_STORAGE_ACCOUNT_ACCESSKEY: ${ACCESS_KEY:+SET}"
           exit 1
         fi
         
