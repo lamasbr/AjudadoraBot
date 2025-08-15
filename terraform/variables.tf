@@ -149,7 +149,7 @@ variable "free_tier_constraints" {
 variable "enable_cost_alerts" {
   description = "Enable cost / performance alerts"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "alert_email" {

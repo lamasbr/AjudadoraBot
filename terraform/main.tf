@@ -36,6 +36,11 @@ resource "azurerm_key_vault_secret" "telegram_bot_token" {
   content_type = "Managed by Terraform"
   tags         = local.effective_tags
 
+  lifecycle {
+    # Evita sobrescrever o valor do segredo existente quando já houver um no Key Vault
+    ignore_changes = [value]
+  }
+
   depends_on = [azurerm_key_vault_access_policy.terraform]
 }
 
@@ -46,6 +51,11 @@ resource "azurerm_key_vault_secret" "jwt_secret" {
   content_type = "Managed by Terraform"
   tags         = local.effective_tags
 
+  lifecycle {
+    # Evita sobrescrever o valor do segredo existente quando já houver um no Key Vault
+    ignore_changes = [value]
+  }
+
   depends_on = [azurerm_key_vault_access_policy.terraform]
 }
 
@@ -55,6 +65,11 @@ resource "azurerm_key_vault_secret" "datadog_api_key" {
   key_vault_id = azurerm_key_vault.main.id
   content_type = "Managed by Terraform"
   tags         = local.effective_tags
+
+  lifecycle {
+    # Evita sobrescrever o valor do segredo existente quando já houver um no Key Vault
+    ignore_changes = [value]
+  }
 
   depends_on = [azurerm_key_vault_access_policy.terraform]
 }
@@ -179,6 +194,7 @@ resource "azurerm_storage_account" "main" {
 
 # Monitoring via módulo
 module "monitoring" {
+  count                  = var.enable_cost_alerts ? 1 : 0
   source                 = "./modules/monitoring"
   enable_cost_alerts     = var.enable_cost_alerts
   alert_email            = var.alert_email
